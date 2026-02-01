@@ -15,6 +15,8 @@ export class TreeRenderer extends BaseRenderer {
     this.currentSnapshot = null;
     this.expandedNodes = new Set();
     this.treeEl = null;
+    this.drillStack = []; // Track drill-down history
+    this.scrollPosition = 0; // Preserve scroll position
   }
 
   init(container, options = {}) {
@@ -26,22 +28,83 @@ export class TreeRenderer extends BaseRenderer {
     container.style.cssText = `
       background: ${this.theme === 'dark' ? '#1e1e1e' : '#f5f5f5'};
       color: ${this.theme === 'dark' ? '#d4d4d4' : '#333'};
-      padding: 20px;
+      padding: 0;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
       font-size: 14px;
-      overflow-y: auto;
+      overflow: hidden;
       line-height: 1.6;
+      display: flex;
+      flex-direction: column;
     `;
 
-    // Create tree container
+    // Add navigation bar
+    this._createNavigationBar();
+
+    // Create scrollable tree container
+    const scrollContainer = document.createElement('div');
+    scrollContainer.className = 'tree-scroll-container';
+    scrollContainer.style.cssText = 'flex: 1; overflow-y: auto; padding: 20px;';
+    
+    // Preserve scroll position
+    scrollContainer.addEventListener('scroll', () => {
+      this.scrollPosition = scrollContainer.scrollTop;
+    });
+
     this.treeEl = document.createElement('ul');
     this.treeEl.style.cssText = 'list-style: none; padding-left: 0; margin: 0;';
-    container.appendChild(this.treeEl);
+    scrollContainer.appendChild(this.treeEl);
+    container.appendChild(scrollContainer);
+  }
+
+  _createNavigationBar() {
+    const navBar = document.createElement('div');
+    navBar.className = 'tree-nav-bar';
+    navBar.style.cssText = `
+      padding: 10px;
+      background: ${this.theme === 'dark' ? '#2d2d2d' : '#e0e0e0'};
+      border-bottom: 1px solid ${this.theme === 'dark' ? '#444' : '#ccc'};
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    `;
+
+    const backBtn = document.createElement('button');
+    backBtn.textContent = '← Back';
+    backBtn.disabled = this.drillStack.length === 0;
+    backBtn.style.cssText = `
+      padding: 6px 12px;
+      background: ${this.theme === 'dark' ? '#3a3a3a' : '#ddd'};
+      color: ${this.theme === 'dark' ? '#d4d4d4' : '#333'};
+      border: 1px solid ${this.theme === 'dark' ? '#555' : '#aaa'};
+      border-radius: 4px;
+      cursor: ${this.drillStack.length === 0 ? 'not-allowed' : 'pointer'};
+      opacity: ${this.drillStack.length === 0 ? 0.5 : 1};
+    `;
+    backBtn.addEventListener('click', () => {
+      if (this.drillStack.length > 0) {
+        this.drillUp();
+      }
+    });
+
+    const breadcrumb = document.createElement('span');
+    breadcrumb.className = 'tree-breadcrumb';
+    breadcrumb.style.cssText = 'flex: 1; color: #999; font-size: 13px;';
+    breadcrumb.textContent = this.drillStack.length === 0 
+      ? 'Root Graph' 
+      : `Root → ${this.drillStack.map(s => s.title).join(' → ')}`;
+
+    navBar.appendChild(backBtn);
+    navBar.appendChild(breadcrumb);
+    this.container.appendChild(navBar);
   }
 
   render(graphSnapshot) {
     this.currentSnapshot = graphSnapshot;
     if (!this.treeEl) return;
+
+    // Store scroll position
+    const scrollContainer = this.container?.querySelector('.tree-scroll-container');
+    const currentScroll = scrollContainer ? scrollContainer.scrollTop : this.scrollPosition;
 
     this.treeEl.innerHTML = '';
 
@@ -57,6 +120,7 @@ export class TreeRenderer extends BaseRenderer {
     if (relations.length > 0) {
       const relHeader = document.createElement('li');
       relHeader.innerHTML = '<strong>Relations</strong>';
+      relHeader.style.cssText = 'margin-top: 20px; padding: 10px 0;';
       this.treeEl.appendChild(relHeader);
 
       const relList = document.createElement('ul');
@@ -78,6 +142,32 @@ export class TreeRenderer extends BaseRenderer {
       });
 
       this.treeEl.appendChild(relList);
+    }
+
+    // Restore scroll position
+    if (scrollContainer && currentScroll) {
+      setTimeout(() => {
+        scrollContainer.scrollTop = currentScroll;
+      }, 0);
+    }
+
+    // Update breadcrumb
+    this._updateBreadcrumb();
+  }
+
+  _updateBreadcrumb() {
+    const breadcrumb = this.container?.querySelector('.tree-breadcrumb');
+    if (breadcrumb) {
+      breadcrumb.textContent = this.drillStack.length === 0 
+        ? 'Root Graph' 
+        : `Root → ${this.drillStack.map(s => s.title).join(' → ')}`;
+    }
+
+    const backBtn = this.container?.querySelector('button');
+    if (backBtn) {
+      backBtn.disabled = this.drillStack.length === 0;
+      backBtn.style.cursor = this.drillStack.length === 0 ? 'not-allowed' : 'pointer';
+      backBtn.style.opacity = this.drillStack.length === 0 ? '0.5' : '1';
     }
   }
 
@@ -118,12 +208,34 @@ export class TreeRenderer extends BaseRenderer {
       this._emitEvent('nodeClicked', { entityId: entity.id, entity });
     });
 
-    // Double-click to expand
+    // Double-click to expand metadata
     nodeDiv.addEventListener('dblclick', (e) => {
       e.stopPropagation();
       this._toggleNode(entity.id);
       icon.textContent = this.expandedNodes.has(entity.id) ? '▼' : '▶';
+      this.render(this.currentSnapshot); // Re-render to show/hide metadata
     });
+
+    // Add drill-down button if entity has subgraph
+    if (entity.hasSubgraph || entity.metadata?.hasSubgraph) {
+      const drillBtn = document.createElement('button');
+      drillBtn.textContent = '🔍 Drill Down';
+      drillBtn.style.cssText = `
+        margin-left: 10px;
+        padding: 4px 8px;
+        background: ${this.theme === 'dark' ? '#3a3a3a' : '#ddd'};
+        color: ${this.theme === 'dark' ? '#d4d4d4' : '#333'};
+        border: 1px solid ${this.theme === 'dark' ? '#555' : '#aaa'};
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 11px;
+      `;
+      drillBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.drillDown(entity.id);
+      });
+      nodeDiv.appendChild(drillBtn);
+    }
 
     li.appendChild(nodeDiv);
 
@@ -173,10 +285,60 @@ export class TreeRenderer extends BaseRenderer {
     }
   }
 
+  focus(targetType, targetId) {
+    super.focus(targetType, targetId);
+    // Scroll to entity in tree
+    const scrollContainer = this.container?.querySelector('.tree-scroll-container');
+    if (scrollContainer) {
+      const nodeDiv = this.treeEl?.querySelector(`[data-entity-id="${targetId}"]`);
+      if (nodeDiv) {
+        nodeDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        this.highlight('entity', targetId, 'focus');
+      }
+    }
+  }
+
+  drillDown(entityId) {
+    super.drillDown(entityId);
+    const entity = this.currentSnapshot?.entities?.find(e => e.id === entityId);
+    if (entity) {
+      // Push current state to stack
+      this.drillStack.push({
+        entityId,
+        title: entity.metadata?.title || entityId,
+        snapshot: this.currentSnapshot
+      });
+      
+      // In real implementation, would load subgraph
+      // For now, just update UI state
+      this._updateBreadcrumb();
+      
+      // Emit event so bridge/graph can load subgraph
+      this._emitEvent('drillDown', { entityId });
+    }
+  }
+
+  drillUp() {
+    super.drillUp();
+    if (this.drillStack.length > 0) {
+      const previous = this.drillStack.pop();
+      
+      // Restore previous snapshot
+      if (previous.snapshot) {
+        this.render(previous.snapshot);
+      }
+      
+      // Emit event so bridge/graph can navigate back
+      this._emitEvent('drillUp', {});
+    }
+  }
+
   destroy() {
     super.destroy();
     this.currentSnapshot = null;
     this.expandedNodes.clear();
+    this.drillStack = [];
+    this.scrollPosition = 0;
     this.treeEl = null;
   }
 }

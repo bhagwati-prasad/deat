@@ -66,10 +66,24 @@ export class BaseRenderer {
   /**
    * Clear highlight from an element
    *
-   * @param {string} targetId - Element to unhighlight
+   * @param {string} targetType - 'entity' | 'relation' (optional)
+   * @param {string} targetId - Element to unhighlight (optional)
    */
-  clearHighlight(targetId) {
-    this.highlightedElements.delete(targetId);
+  clearHighlight(targetType, targetId) {
+    if (targetId) {
+      this.highlightedElements.delete(targetId);
+    } else if (targetType) {
+      // Clear all of a specific type
+      const toDelete = [];
+      for (const [id, _] of this.highlightedElements.entries()) {
+        // In real impl, would check type; for now clear all
+        toDelete.push(id);
+      }
+      toDelete.forEach(id => this.highlightedElements.delete(id));
+    } else {
+      // Clear all
+      this.clearAllHighlights();
+    }
   }
 
   /**
@@ -77,6 +91,33 @@ export class BaseRenderer {
    */
   clearAllHighlights() {
     this.highlightedElements.clear();
+  }
+
+  /**
+   * Focus on a specific element (zoom/scroll into view)
+   *
+   * @param {string} targetType - 'entity' | 'relation' | 'subgraph'
+   * @param {string} targetId - Element to focus
+   */
+  focus(targetType, targetId) {
+    // Subclasses implement specific focus behavior
+    this._emitEvent('focus', { targetType, targetId });
+  }
+
+  /**
+   * Drill down into a subgraph
+   *
+   * @param {string} entityId - Entity containing subgraph
+   */
+  drillDown(entityId) {
+    this._emitEvent('drillDown', { entityId });
+  }
+
+  /**
+   * Drill up to parent graph
+   */
+  drillUp() {
+    this._emitEvent('drillUp', {});
   }
 
   /**

@@ -13,7 +13,7 @@ export class UIBridge {
     this.graph = graph;
     this.bus = bus;
     this.renderer = options.renderer;
-    this.mode = options.mode || 'explore'; // explore, view, edit, annotate
+    this.mode = options.mode || 'view'; // view, edit, annotate
     this.theme = options.theme || 'light';
     this.container = null;
     this._unsubscribers = [];
@@ -26,7 +26,7 @@ export class UIBridge {
    * @param {HTMLElement} container - DOM element for rendering
    */
   setRenderer(renderer, container) {
-    // Cleanup old renderer
+    // Cleanup old renderer and subscriptions
     if (this.renderer && this.renderer.destroy) {
       try {
         this.renderer.destroy();
@@ -34,6 +34,9 @@ export class UIBridge {
         console.error('Error destroying renderer:', err);
       }
     }
+    
+    // Unsubscribe from old events before setting new renderer
+    this.unsubscribeFromEvents();
 
     this.renderer = renderer;
     this.container = container;
@@ -92,24 +95,45 @@ export class UIBridge {
    * @throws {Error} on validation or execution failure
    */
   executeCommand(command, params = {}) {
+    // Validate command
+    if (!command || typeof command !== 'string') {
+      throw new Error('Invalid command: command must be a non-empty string');
+    }
+
+    // Validate mode restrictions
+    const writeCommands = ['addEntity', 'updateEntity', 'removeEntity', 'addRelation', 'updateRelation', 'removeRelation'];
+    if (writeCommands.includes(command) && this.mode === 'view') {
+      throw new Error(`Command '${command}' not allowed in view mode`);
+    }
+
     try {
       switch (command) {
         case 'addEntity':
+          if (!params.type) throw new Error('addEntity requires type parameter');
           this.graph.addEntity(params);
           break;
         case 'updateEntity':
+          if (!params.id) throw new Error('updateEntity requires id parameter');
+          if (!params.patch) throw new Error('updateEntity requires patch parameter');
           this.graph.updateEntity(params.id, params.patch);
           break;
         case 'removeEntity':
+          if (!params.id) throw new Error('removeEntity requires id parameter');
           this.graph.removeEntity(params.id);
           break;
         case 'addRelation':
+          if (!params.from) throw new Error('addRelation requires from parameter');
+          if (!params.to) throw new Error('addRelation requires to parameter');
+          if (!params.type) throw new Error('addRelation requires type parameter');
           this.graph.addRelation(params);
           break;
         case 'updateRelation':
+          if (!params.id) throw new Error('updateRelation requires id parameter');
+          if (!params.patch) throw new Error('updateRelation requires patch parameter');
           this.graph.updateRelation(params.id, params.patch);
           break;
         case 'removeRelation':
+          if (!params.id) throw new Error('removeRelation requires id parameter');
           if (this.graph && typeof this.graph.removeRelation === 'function') {
             this.graph.removeRelation(params.id);
           } else {
@@ -117,11 +141,16 @@ export class UIBridge {
           }
           break;
         default:
-          console.warn(`Unknown command: ${command}`);
-          return;
+          throw new Error(`Unknown command: ${command}`);
       }
     } catch (error) {
       console.error(`Command '${command}' failed:`, error);
+      // Emit error event for UI to handle
+      this.bus.emit('ui.command.error', {
+        command,
+        params,
+        error: error.message
+      }, { source: 'UIBridge' });
       throw error;
     }
   }
@@ -173,6 +202,39 @@ export class UIBridge {
     this._unsubscribers.push(
       this.bus.subscribe('annotation.added', onAnnotationChange),
       this.bus.subscribe('annotation.updated', onAnnotationChange)
+    );
+
+    // Cassette events
+    const onCassetteFrame = (event) => {
+      const { targetId, targetType, action } = event.data;
+      if (this.renderer && targetId) {
+        try {
+          if (action === 'highlight' && this.renderer.highlight) {
+            this.renderer.highlight(targetType || 'entity', targetId, 'play');
+          } else if (action === 'focus' && this.renderer.focus) {
+            this.renderer.focus(targetType || 'entity', targetId);
+          }
+        } catch (err) {
+          console.error('Cassette frame action failed:', err);
+        }
+      }
+    };
+
+    this._unsubscribers.push(
+      this.bus.subscribe('cassette.frame.enter', onCassetteFrame),
+      this.bus.subscribe('cassette.player.play', () => {
+        if (this.renderer && this.renderer.setMode) {
+          this.renderer.setMode('cassette');
+        }
+      }),
+      this.bus.subscribe('cassette.player.stop', () => {
+        if (this.renderer && this.renderer.setMode) {
+          this.renderer.setMode(this.mode);
+        }
+        if (this.renderer && this.renderer.clearAllHighlights) {
+          this.renderer.clearAllHighlights();
+        }
+      })
     );
   }
 

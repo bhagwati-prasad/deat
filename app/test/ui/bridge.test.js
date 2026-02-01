@@ -77,7 +77,7 @@ describe('UIBridge', () => {
     });
 
     it('should have default mode and theme', () => {
-      expect(bridge.mode).toBe('explore');
+      expect(bridge.mode).toBe('view');
       expect(bridge.theme).toBe('light');
     });
   });
@@ -93,7 +93,7 @@ describe('UIBridge', () => {
       const initSpy = jest.spyOn(renderer, 'init');
       bridge.setRenderer(renderer, container);
       expect(initSpy).toHaveBeenCalledWith(container, {
-        mode: 'explore',
+        mode: 'view',
         theme: 'light'
       });
     });
@@ -115,10 +115,31 @@ describe('UIBridge', () => {
     beforeEach(() => {
       schema.registerEntityType('Person', { required: [] });
       bridge.setRenderer(renderer, container);
+      bridge.setMode('edit'); // Set to edit mode to allow mutations
     });
 
-    it('should execute addEntity command', () => {
+    it('should throw error for invalid command', () => {
+      expect(() => bridge.executeCommand('')).toThrow('Invalid command');
+      expect(() => bridge.executeCommand(null)).toThrow('Invalid command');
+    });
+
+    it('should throw error for write commands in view mode', () => {
+      bridge.setMode('view');
+      expect(() => {
+        bridge.executeCommand('addEntity', {
+          type: 'Person',
+          data: { name: 'Alice' }
+        });
+      }).toThrow('not allowed in view mode');
+    });
+
+    it('should execute addEntity command with validation', () => {
       const addSpy = jest.spyOn(graph, 'addEntity').mockImplementation(() => {});
+      
+      expect(() => {
+        bridge.executeCommand('addEntity', { name: 'Alice' });
+      }).toThrow('requires type parameter');
+      
       bridge.executeCommand('addEntity', {
         type: 'Person',
         data: { name: 'Alice' }
@@ -129,9 +150,18 @@ describe('UIBridge', () => {
     it('should execute updateEntity command', () => {
       const entity = { id: 'ent-update' };
       const updateSpy = jest.spyOn(graph, 'updateEntity').mockImplementation(() => {});
+      
+      expect(() => {
+        bridge.executeCommand('updateEntity', { data: { name: 'Charlie' } });
+      }).toThrow('requires id parameter');
+      
+      expect(() => {
+        bridge.executeCommand('updateEntity', { id: entity.id });
+      }).toThrow('requires patch parameter');
+      
       bridge.executeCommand('updateEntity', {
         id: entity.id,
-        data: { name: 'Charlie' }
+        patch: { name: 'Charlie' }
       });
       expect(updateSpy).toHaveBeenCalled();
     });
@@ -139,6 +169,11 @@ describe('UIBridge', () => {
     it('should execute removeEntity command', () => {
       const entity = { id: 'ent-remove' };
       const removeSpy = jest.spyOn(graph, 'removeEntity').mockImplementation(() => {});
+      
+      expect(() => {
+        bridge.executeCommand('removeEntity', {});
+      }).toThrow('requires id parameter');
+      
       bridge.executeCommand('removeEntity', { id: entity.id });
       expect(removeSpy).toHaveBeenCalled();
     });
@@ -147,9 +182,14 @@ describe('UIBridge', () => {
       const entity1 = { id: 'a1' };
       const entity2 = { id: 'a2' };
       const addRelSpy = jest.spyOn(graph, 'addRelation').mockImplementation(() => {});
+      
+      expect(() => {
+        bridge.executeCommand('addRelation', {});
+      }).toThrow('requires from parameter');
+      
       bridge.executeCommand('addRelation', {
-        source: entity1.id,
-        target: entity2.id,
+        from: entity1.id,
+        to: entity2.id,
         type: 'knows'
       });
       expect(addRelSpy).toHaveBeenCalled();
@@ -164,7 +204,18 @@ describe('UIBridge', () => {
     it('should handle unknown commands gracefully', () => {
       expect(() => {
         bridge.executeCommand('unknownCommand', {});
-      }).not.toThrow();
+      }).toThrow('Unknown command');
+    });
+
+    it('should emit error event on command failure', () => {
+      const errorListener = jest.fn();
+      bus.subscribe('ui.command.error', errorListener);
+      
+      expect(() => {
+        bridge.executeCommand('addEntity', {}); // Missing required type
+      }).toThrow();
+      
+      expect(errorListener).toHaveBeenCalled();
     });
   });
 
@@ -185,7 +236,7 @@ describe('UIBridge', () => {
     });
 
     it('should accept multiple mode values', () => {
-      ['explore', 'annotate', 'cassette', 'sync'].forEach(mode => {
+      ['view', 'edit', 'annotate'].forEach(mode => {
         bridge.setMode(mode);
         expect(bridge.mode).toBe(mode);
       });

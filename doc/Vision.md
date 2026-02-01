@@ -110,6 +110,16 @@ It is a generic, schema-first, offline-capable platform designed to map complex 
 ### view-mode renderers (graph, json text, html etc.) : Plug and play with uniform interface
 ### ui (components, icons, styles, js [UI specific])
 ### app.js => export, import and other functions which are needed for the app to run just from the console. Nothing UI specific.
+
+
+# Additional features
+## I want to be able to highlight a node or relation using a class (different highlight for hover and select, selection is done by clicking).
+## I want to create a player which can highlight sequence of nodes and relations, basically play/pause/rewind/fast-forward/speed-up/slow-down a cassette, a cassette would be a sequence of UUIDs (which could be of nodes or relations) and the state of cassete (how much has been played, what is current location, what is time interval of movement)
+
+
+# Frontend : HTML5, CSS3, Vanilla JS, d3.js
+
+# Application Structure
 /app
 ├── index.html
 ├── app.js                      # System Bootstrapper (Exports global API to window)
@@ -190,12 +200,4 @@ It is a generic, schema-first, offline-capable platform designed to map complex 
 │
 └── /tests                      # Test suites per module
     ├── core.test.js
-    └── adapters.test.js
-
-
-# Additional features
-## I want to be able to highlight a node or relation using a class (different highlight for hover and select, selection is done by clicking).
-## I want to create a player which can highlight sequence of nodes and relations, basically play/pause/rewind/fast-forward/speed-up/slow-down a cassette, a cassette would be a sequence of UUIDs (which could be of nodes or relations) and the state of cassete (how much has been played, what is current location, what is time interval of movement)
-
-
-# Frontend : HTML5, CSS3, Vanilla JS, d3.js
+        └── adapters.test.js

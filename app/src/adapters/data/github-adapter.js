@@ -63,23 +63,33 @@ class GitHubAdapter {
       const { org, user, type = 'org', limit = 100 } = query;
 
       let endpoint = '';
+      let usePagination = false;
 
       if (type === 'org' && org) {
         endpoint = `/orgs/${org}`;
       } else if (type === 'repos' && org) {
         endpoint = `/orgs/${org}/repos?per_page=${limit}`;
+        usePagination = true;
       } else if (type === 'users' && org) {
         endpoint = `/orgs/${org}/members?per_page=${limit}`;
+        usePagination = true;
       } else if (type === 'user-info' && user) {
         endpoint = `/users/${user}`;
       } else if (type === 'user-repos' && user) {
         endpoint = `/users/${user}/repos?per_page=${limit}`;
+        usePagination = true;
       } else if (type === 'user') {
         endpoint = `/user`;
       } else {
         throw new Error(`Unknown fetch type: ${type}`);
       }
 
+      // Use pagination for list endpoints
+      if (usePagination) {
+        return await this._fetchPaginated(endpoint);
+      }
+
+      // Single resource fetch
       const response = await fetch(`${this.apiBase}${endpoint}`, {
         headers: this._headers()
       });
@@ -87,15 +97,7 @@ class GitHubAdapter {
       this._updateRateLimit(response);
 
       if (!response.ok) {
-        if (response.status === 403) {
-          throw {
-            code: 632,
-            message: 'GitHub API rate limit exceeded',
-            status: 403,
-            rateLimit: this.rateLimit
-          };
-        }
-        throw new Error(`GitHub API error: ${response.statusText}`);
+        this._handleErrorResponse(response);
       }
 
       const data = await response.json();
@@ -108,6 +110,114 @@ class GitHubAdapter {
         originalError: error
       };
     }
+  }
+
+  /**
+   * Fetch paginated data from GitHub API
+   * Follows Link headers to retrieve all pages
+   * @private
+   */
+  async _fetchPaginated(endpoint) {
+    const allResults = [];
+    let url = `${this.apiBase}${endpoint}`;
+    let pageCount = 0;
+    const maxPages = 100; // Safety limit
+
+    while (url && pageCount < maxPages) {
+      pageCount++;
+      console.log(`Fetching page ${pageCount}: ${url}`);
+
+      const response = await fetch(url, {
+        headers: this._headers()
+      });
+
+      this._updateRateLimit(response);
+
+      if (!response.ok) {
+        await this._handleErrorResponse(response);
+      }
+
+      const data = await response.json();
+      
+      if (Array.isArray(data)) {
+        allResults.push(...data);
+        console.log(`Retrieved ${data.length} items (total: ${allResults.length})`);
+      } else {
+        // Single object response
+        return data;
+      }
+
+      // Check for next page in Link header
+      url = this._getNextPageUrl(response);
+      
+      if (!url) {
+        console.log(`All pages fetched. Total items: ${allResults.length}`);
+      }
+    }
+
+    if (pageCount >= maxPages) {
+      console.warn(`Reached maximum page limit (${maxPages}). Some results may be missing.`);
+    }
+
+    return allResults;
+  }
+
+  /**
+   * Handle error responses from GitHub API
+   * @private
+   */
+  async _handleErrorResponse(response) {
+    if (response.status === 403) {
+      const errorBody = await response.text();
+      if (errorBody.includes('rate limit')) {
+        throw {
+          code: 632,
+          message: 'GitHub API rate limit exceeded',
+          status: 403,
+          rateLimit: this.rateLimit
+        };
+      }
+      throw {
+        code: 632,
+        message: 'GitHub API forbidden: Check your token permissions. Required scopes: repo (or public_repo), read:org, read:user',
+        status: 403
+      };
+    }
+    if (response.status === 401) {
+      throw {
+        code: 601,
+        message: 'GitHub authentication failed: Invalid or expired token',
+        status: 401
+      };
+    }
+    if (response.status === 404) {
+      throw {
+        code: 632,
+        message: 'GitHub resource not found: Check the organization/user name',
+        status: 404
+      };
+    }
+    throw new Error(`GitHub API error (${response.status}): ${response.statusText}`);
+  }
+
+  /**
+   * Extract next page URL from Link header
+   * @private
+   */
+  _getNextPageUrl(response) {
+    const linkHeader = response.headers.get('Link');
+    if (!linkHeader) return null;
+
+    // Parse Link header: <url>; rel="next", <url>; rel="last"
+    const links = linkHeader.split(',');
+    for (const link of links) {
+      const match = link.match(/<([^>]+)>;\s*rel="next"/);
+      if (match) {
+        return match[1];
+      }
+    }
+
+    return null;
   }
 
   /**

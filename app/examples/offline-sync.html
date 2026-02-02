@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GS - Offline/Online Sync</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      padding: 20px;
+      max-width: 1200px;
+      margin: 0 auto;
+      background: #f5f5f5;
+    }
+    h1 {
+      color: #333;
+      border-bottom: 3px solid #17a2b8;
+      padding-bottom: 10px;
+    }
+    .status-bar {
+      background: white;
+      padding: 15px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      margin: 20px 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .status-indicator {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .indicator-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+    .online { background: #28a745; }
+    .offline { background: #dc3545; }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    .panel {
+      background: white;
+      padding: 20px;
+      margin: 20px 0;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .button {
+      background: #17a2b8;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 14px;
+      margin: 5px;
+    }
+    .button:hover { background: #138496; }
+    .button.danger {
+      background: #dc3545;
+    }
+    .button.danger:hover {
+      background: #c82333;
+    }
+    .queue {
+      background: #f8f9fa;
+      border: 1px solid #dee2e6;
+      padding: 15px;
+      margin: 10px 0;
+      border-radius: 5px;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    .queue-item {
+      background: white;
+      border-left: 4px solid #17a2b8;
+      padding: 10px;
+      margin: 5px 0;
+      border-radius: 3px;
+    }
+    .synced {
+      border-left-color: #28a745;
+      opacity: 0.6;
+    }
+    pre {
+      background: #1e1e1e;
+      color: #d4d4d4;
+      padding: 15px;
+      border-radius: 5px;
+      overflow-x: auto;
+      font-size: 12px;
+    }
+    .success { color: #28a745; font-weight: bold; }
+    .warning { color: #ffc107; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <h1>🌐 GraphSense - Offline/Online Sync</h1>
+  <p>
+    Demonstrates offline-first architecture: work without network, queue changes,
+    and sync when online. All features work offline!
+  </p>
+
+  <!-- Status Bar -->
+  <div class="status-bar">
+    <div class="status-indicator">
+      <div class="indicator-dot" id="status-dot"></div>
+      <strong id="status-text">Status: Online</strong>
+    </div>
+    <div>
+      <button class="button" onclick="goOffline()" id="btn-offline">Go Offline</button>
+      <button class="button" onclick="goOnline()" id="btn-online">Go Online</button>
+    </div>
+  </div>
+
+  <!-- Operations Panel -->
+  <div class="panel">
+    <h2>📝 Offline Operations</h2>
+    <p>Perform operations while offline - they'll be queued automatically:</p>
+    
+    <div>
+      <button class="button" onclick="addEntity()">Add Entity</button>
+      <button class="button" onclick="updateEntity()">Update Entity</button>
+      <button class="button" onclick="removeEntity()">Remove Entity</button>
+      <button class="button danger" onclick="clearQueue()">Clear Queue</button>
+    </div>
+
+    <h3>Operation Queue (<span id="queue-count">0</span> pending):</h3>
+    <div id="operation-queue" class="queue">
+      <em>No operations in queue</em>
+    </div>
+  </div>
+
+  <!-- Sync Panel -->
+  <div class="panel">
+    <h2>🔄 Sync Status</h2>
+    <p>Synchronize offline changes when connection is restored:</p>
+    
+    <div>
+      <button class="button" onclick="syncNow()" id="btn-sync" disabled>Sync Now</button>
+      <button class="button" onclick="showConflicts()">Show Conflicts</button>
+    </div>
+
+    <pre id="sync-log">Waiting for operations...</pre>
+  </div>
+
+  <!-- Graph State Panel -->
+  <div class="panel">
+    <h2>📊 Current Graph State</h2>
+    <p>Entities: <strong id="entity-count">0</strong></p>
+    <pre id="graph-state">{}</pre>
+  </div>
+
+  <script type="module">
+    import { Graph } from '../src/core/graph.js';
+    import { Schema } from '../src/core/schema.js';
+    import { EventBus } from '../src/utils/event-emitter.js';
+    import { UndoRedoManager } from '../src/core/undo-redo.js';
+
+    // Initialize
+    const eventBus = new EventBus();
+    const schema = new Schema();
+    
+    schema.registerEntityType('task', {
+      title: { type: 'string', required: true },
+      status: { type: 'string', required: false },
+      priority: { type: 'number', required: false }
+    });
+
+    const graph = new Graph(eventBus, schema);
+    const undoRedo = new UndoRedoManager(graph, eventBus);
+
+    // Offline state
+    let isOnline = true;
+    let operationQueue = [];
+    let entityCounter = 0;
+
+    // Listen to all graph mutations
+    const mutationEvents = [
+      'graph.entity.added',
+      'graph.entity.updated',
+      'graph.entity.removed'
+    ];
+
+    mutationEvents.forEach(eventType => {
+      eventBus.on(eventType, (event) => {
+        if (!isOnline) {
+          // Queue operation
+          operationQueue.push({
+            id: `op-${Date.now()}-${Math.random()}`,
+            type: eventType,
+            timestamp: Date.now(),
+            data: event.data,
+            synced: false
+          });
+          updateQueueUI();
+        }
+        updateGraphState();
+      });
+    });
+
+    function updateStatusBar() {
+      const dot = document.getElementById('status-dot');
+      const text = document.getElementById('status-text');
+      const btnSync = document.getElementById('btn-sync');
+
+      if (isOnline) {
+        dot.className = 'indicator-dot online';
+        text.innerHTML = '<span class="success">Status: Online ✓</span>';
+        btnSync.disabled = operationQueue.filter(op => !op.synced).length === 0;
+      } else {
+        dot.className = 'indicator-dot offline';
+        text.innerHTML = '<span class="warning">Status: Offline ⚠️</span>';
+        btnSync.disabled = true;
+      }
+
+      document.getElementById('btn-offline').disabled = !isOnline;
+      document.getElementById('btn-online').disabled = isOnline;
+    }
+
+    function updateQueueUI() {
+      const container = document.getElementById('operation-queue');
+      const pendingOps = operationQueue.filter(op => !op.synced);
+      
+      document.getElementById('queue-count').textContent = pendingOps.length;
+
+      if (operationQueue.length === 0) {
+        container.innerHTML = '<em>No operations in queue</em>';
+        return;
+      }
+
+      let html = '';
+      operationQueue.forEach((op, i) => {
+        const className = op.synced ? 'queue-item synced' : 'queue-item';
+        const status = op.synced ? '✓ Synced' : '⏳ Pending';
+        html += `<div class="${className}">
+          <strong>#${i + 1}</strong> ${status}<br>
+          Type: ${op.type}<br>
+          Time: ${new Date(op.timestamp).toLocaleTimeString()}<br>
+          Entity: ${op.data.entity?.id || op.data.entityId || 'N/A'}
+        </div>`;
+      });
+
+      container.innerHTML = html;
+      updateStatusBar();
+    }
+
+    function updateGraphState() {
+      const entities = graph.getEntities();
+      document.getElementById('entity-count').textContent = entities.length;
+      document.getElementById('graph-state').textContent = JSON.stringify(
+        { entities: entities.map(e => ({ id: e.id, ...e.metadata })) },
+        null,
+        2
+      );
+    }
+
+    function logSync(message, isError = false) {
+      const log = document.getElementById('sync-log');
+      const timestamp = new Date().toLocaleTimeString();
+      const prefix = isError ? '❌' : '✓';
+      log.textContent += `[${timestamp}] ${prefix} ${message}\n`;
+      log.scrollTop = log.scrollHeight;
+    }
+
+    window.goOffline = function() {
+      isOnline = false;
+      updateStatusBar();
+      logSync('Went offline - operations will be queued');
+      console.log('Now offline');
+    };
+
+    window.goOnline = function() {
+      isOnline = true;
+      updateStatusBar();
+      logSync('Came online - ready to sync');
+      console.log('Now online');
+    };
+
+    window.addEntity = function() {
+      entityCounter++;
+      const entity = {
+        id: `task${entityCounter}`,
+        type: 'task',
+        metadata: {
+          title: `Task ${entityCounter}`,
+          status: 'pending',
+          priority: Math.floor(Math.random() * 5) + 1
+        }
+      };
+
+      graph.addEntity(entity);
+      logSync(`Added entity: ${entity.id}`);
+      console.log('Added:', entity);
+    };
+
+    window.updateEntity = function() {
+      const entities = graph.getEntities();
+      if (entities.length === 0) {
+        alert('No entities to update!');
+        return;
+      }
+
+      const entity = entities[entities.length - 1];
+      graph.updateEntity(entity.id, {
+        title: entity.metadata.title,
+        status: 'completed',
+        priority: entity.metadata.priority
+      });
+
+      logSync(`Updated entity: ${entity.id}`);
+      console.log('Updated:', entity.id);
+    };
+
+    window.removeEntity = function() {
+      const entities = graph.getEntities();
+      if (entities.length === 0) {
+        alert('No entities to remove!');
+        return;
+      }
+
+      const entity = entities[0];
+      graph.removeEntity(entity.id);
+      logSync(`Removed entity: ${entity.id}`);
+      console.log('Removed:', entity.id);
+    };
+
+    window.clearQueue = function() {
+      if (!confirm('Clear all queued operations?')) {
+        return;
+      }
+
+      operationQueue = [];
+      updateQueueUI();
+      logSync('Cleared operation queue');
+      console.log('Queue cleared');
+    };
+
+    window.syncNow = function() {
+      if (!isOnline) {
+        alert('Cannot sync while offline!');
+        return;
+      }
+
+      const pendingOps = operationQueue.filter(op => !op.synced);
+      if (pendingOps.length === 0) {
+        alert('No operations to sync!');
+        return;
+      }
+
+      logSync(`Starting sync of ${pendingOps.length} operations...`);
+
+      // Simulate sync with delay
+      let syncedCount = 0;
+      pendingOps.forEach((op, i) => {
+        setTimeout(() => {
+          op.synced = true;
+          syncedCount++;
+          updateQueueUI();
+          
+          if (syncedCount === pendingOps.length) {
+            logSync(`Sync complete! Synced ${syncedCount} operations`);
+            console.log('Sync complete');
+          }
+        }, (i + 1) * 500);
+      });
+    };
+
+    window.showConflicts = function() {
+      // In a real system, this would show merge conflicts
+      const message = `
+Conflict Resolution Strategies:
+- Last Write Wins (LWW)
+- Operational Transform (OT)
+- CRDTs (Conflict-free Replicated Data Types)
+
+Current: Using timestamp-based LWW
+No conflicts detected in current session.
+      `;
+      
+      alert(message);
+      logSync('Checked for conflicts - none found');
+    };
+
+    // Initialize
+    updateStatusBar();
+    updateQueueUI();
+    updateGraphState();
+
+    // Add sample data
+    graph.addEntity({ id: 'task0', type: 'task', metadata: { title: 'Initial Task', status: 'active', priority: 3 } });
+    entityCounter = 1;
+
+    console.log('Offline/Sync example ready!');
+    console.log('Try: 1) Go Offline, 2) Add/Update entities, 3) Go Online, 4) Sync Now');
+  </script>
+</body>
+</html>

@@ -24,16 +24,14 @@ export class TreeRenderer extends BaseRenderer {
     if (!container) return;
 
     container.innerHTML = '';
-    container.className = 'gs-tree-renderer';
+    container.className = 'gs-tree-renderer renderer-content';
     container.style.cssText = `
       background: ${this.theme === 'dark' ? '#1e1e1e' : '#f5f5f5'};
       color: ${this.theme === 'dark' ? '#d4d4d4' : '#333'};
       padding: 0;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
       font-size: 14px;
-      overflow: hidden;
       line-height: 1.6;
-      display: flex;
       flex-direction: column;
     `;
 
@@ -100,13 +98,18 @@ export class TreeRenderer extends BaseRenderer {
 
   render(graphSnapshot) {
     this.currentSnapshot = graphSnapshot;
-    if (!this.treeEl) return;
+    if (!this.treeEl || !this.container) return;
 
     // Store scroll position
-    const scrollContainer = this.container?.querySelector('.tree-scroll-container');
+    const scrollContainer = this.container.querySelector('.tree-scroll-container');
     const currentScroll = scrollContainer ? scrollContainer.scrollTop : this.scrollPosition;
 
     this.treeEl.innerHTML = '';
+
+    if (!graphSnapshot) {
+      this.treeEl.innerHTML = '<li style="padding: 20px; color: #999;">No data to display</li>';
+      return;
+    }
 
     const { entities = [], relations = [] } = graphSnapshot;
 

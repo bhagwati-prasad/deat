@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GS - Annotations Example</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      padding: 20px;
+      max-width: 1200px;
+      margin: 0 auto;
+      background: #f5f5f5;
+    }
+    h1 {
+      color: #333;
+      border-bottom: 3px solid #ffc107;
+      padding-bottom: 10px;
+    }
+    h2 { color: #555; margin-top: 30px; }
+    .example-section {
+      background: white;
+      padding: 20px;
+      margin: 20px 0;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    pre {
+      background: #1e1e1e;
+      color: #d4d4d4;
+      padding: 15px;
+      border-radius: 5px;
+      overflow-x: auto;
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+    }
+    .button {
+      background: #ffc107;
+      color: #333;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 14px;
+      margin: 5px;
+    }
+    .button:hover { background: #ffb300; }
+    .output {
+      background: #f8f9fa;
+      border: 1px solid #dee2e6;
+      padding: 15px;
+      margin-top: 10px;
+      border-radius: 5px;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+    .note {
+      background: #fff3cd;
+      border-left: 4px solid #ffc107;
+      padding: 10px;
+      margin: 5px 0;
+    }
+    .tag {
+      display: inline-block;
+      background: #007bff;
+      color: white;
+      padding: 3px 8px;
+      border-radius: 3px;
+      margin: 2px;
+      font-size: 11px;
+    }
+    .success { color: #28a745; }
+  </style>
+</head>
+<body>
+  <h1>📝 GraphSense - Annotations Example</h1>
+  <p>
+    Demonstrates how to add notes, tags, and custom metadata to entities
+    without modifying the underlying graph structure.
+  </p>
+
+  <div class="example-section">
+    <h2>📌 1. Adding Notes</h2>
+    <p>Attach rich text notes to entities:</p>
+    <pre><code>GS.annotations.addNote('repo1', 'Important repository for Q1 release')</code></pre>
+    <button class="button" onclick="addNotes()">Run Example</button>
+    <div id="notes-output" class="output"></div>
+  </div>
+
+  <div class="example-section">
+    <h2>🏷️ 2. Adding Tags</h2>
+    <p>Categorize entities with tags:</p>
+    <pre><code>GS.annotations.addTag('repo1', 'critical')
+GS.annotations.addTag('repo1', 'q1-release')</code></pre>
+    <button class="button" onclick="addTags()">Run Example</button>
+    <div id="tags-output" class="output"></div>
+  </div>
+
+  <div class="example-section">
+    <h2>📖 3. Reading Annotations</h2>
+    <p>Get all annotations for an entity:</p>
+    <pre><code>const annotations = GS.annotations.getAnnotations('repo1')</code></pre>
+    <button class="button" onclick="readAnnotations()">Run Example</button>
+    <div id="read-output" class="output"></div>
+  </div>
+
+  <div class="example-section">
+    <h2>🔍 4. Searching by Tags</h2>
+    <p>Find entities with specific tags:</p>
+    <pre><code>const critical = GS.annotations.findByTag('critical')</code></pre>
+    <button class="button" onclick="searchByTags()">Run Example</button>
+    <div id="search-output" class="output"></div>
+  </div>
+
+  <div class="example-section">
+    <h2>✏️ 5. Editing Annotations</h2>
+    <p>Update or remove annotations:</p>
+    <pre><code>GS.annotations.updateNote(noteId, 'Updated content')
+GS.annotations.removeTag('repo1', 'old-tag')</code></pre>
+    <button class="button" onclick="editAnnotations()">Run Example</button>
+    <div id="edit-output" class="output"></div>
+  </div>
+
+  <div class="example-section">
+    <h2>💾 6. Annotations Persistence</h2>
+    <p>Annotations survive graph refreshes:</p>
+    <pre><code>// Annotations persist even when entity metadata changes
+GS.graph.updateEntity('repo1', { ...newData })
+// Annotations still intact!</code></pre>
+    <button class="button" onclick="testPersistence()">Run Example</button>
+    <div id="persistence-output" class="output"></div>
+  </div>
+
+  <script type="module">
+    import { Graph } from '../src/core/graph.js';
+    import { Schema } from '../src/core/schema.js';
+    import { EventBus } from '../src/utils/event-emitter.js';
+    import { AnnotationService } from '../src/services/annotation-service.js';
+
+    // Initialize
+    const eventBus = new EventBus();
+    const schema = new Schema();
+    
+    schema.registerEntityType('repository', {
+      name: { type: 'string', required: true },
+      language: { type: 'string', required: false },
+      stars: { type: 'number', required: false }
+    });
+
+    const graph = new Graph(eventBus, schema);
+    const annotations = new AnnotationService(graph, eventBus);
+
+    // Create sample data
+    graph.addEntity({ id: 'repo1', type: 'repository', metadata: { name: 'graphsense', language: 'JavaScript', stars: 150 } });
+    graph.addEntity({ id: 'repo2', type: 'repository', metadata: { name: 'dataviz', language: 'Python', stars: 89 } });
+    graph.addEntity({ id: 'repo3', type: 'repository', metadata: { name: 'legacy-app', language: 'Java', stars: 12 } });
+
+    window.GS = { graph, annotations };
+
+    function displayOutput(elementId, content) {
+      document.getElementById(elementId).innerHTML = content;
+    }
+
+    window.addNotes = function() {
+      annotations.addNote('repo1', 'Important repository for Q1 release');
+      annotations.addNote('repo1', 'Needs security audit before deployment');
+      annotations.addNote('repo2', 'Consider migrating to TypeScript');
+
+      const repo1Annotations = annotations.getAnnotations('repo1');
+      
+      let output = `<span class="success">✓ Added notes to repositories</span>\n\n`;
+      output += `Notes on repo1:\n`;
+      repo1Annotations.notes.forEach((note, i) => {
+        output += `<div class="note">${i + 1}. ${note.content}<br><small>Created: ${new Date(note.timestamp).toLocaleString()}</small></div>`;
+      });
+
+      displayOutput('notes-output', output);
+      console.log('Notes added:', repo1Annotations.notes);
+    };
+
+    window.addTags = function() {
+      annotations.addTag('repo1', 'critical');
+      annotations.addTag('repo1', 'q1-release');
+      annotations.addTag('repo1', 'javascript');
+      annotations.addTag('repo2', 'migration');
+      annotations.addTag('repo2', 'python');
+      annotations.addTag('repo3', 'legacy');
+      annotations.addTag('repo3', 'deprecated');
+
+      let output = `<span class="success">✓ Added tags to repositories</span>\n\n`;
+      
+      ['repo1', 'repo2', 'repo3'].forEach(repoId => {
+        const repo = graph.getEntity(repoId);
+        const anns = annotations.getAnnotations(repoId);
+        output += `<strong>${repo.metadata.name}:</strong> `;
+        anns.tags.forEach(tag => {
+          output += `<span class="tag">${tag}</span>`;
+        });
+        output += '\n';
+      });
+
+      displayOutput('tags-output', output);
+      console.log('Tags added');
+    };
+
+    window.readAnnotations = function() {
+      const repo1Anns = annotations.getAnnotations('repo1');
+      const repo1 = graph.getEntity('repo1');
+
+      let output = `<span class="success">✓ Reading annotations for ${repo1.metadata.name}</span>\n\n`;
+      
+      output += `<strong>Notes (${repo1Anns.notes.length}):</strong>\n`;
+      repo1Anns.notes.forEach((note, i) => {
+        output += `${i + 1}. ${note.content}\n`;
+      });
+      
+      output += `\n<strong>Tags (${repo1Anns.tags.length}):</strong>\n`;
+      repo1Anns.tags.forEach(tag => {
+        output += `<span class="tag">${tag}</span>`;
+      });
+
+      output += `\n\n<strong>Raw data:</strong>\n${JSON.stringify(repo1Anns, null, 2)}`;
+
+      displayOutput('read-output', output);
+      console.log('Annotations:', repo1Anns);
+    };
+
+    window.searchByTags = function() {
+      // Manually search (AnnotationService would provide this method)
+      const criticalEntities = [];
+      const legacyEntities = [];
+      
+      graph.getEntities().forEach(entity => {
+        const anns = annotations.getAnnotations(entity.id);
+        if (anns.tags.includes('critical')) {
+          criticalEntities.push(entity);
+        }
+        if (anns.tags.includes('legacy')) {
+          legacyEntities.push(entity);
+        }
+      });
+
+      let output = `<span class="success">✓ Search results by tags</span>\n\n`;
+      
+      output += `<strong>Entities tagged 'critical' (${criticalEntities.length}):</strong>\n`;
+      criticalEntities.forEach(e => {
+        output += `• ${e.metadata.name} (${e.id})\n`;
+      });
+      
+      output += `\n<strong>Entities tagged 'legacy' (${legacyEntities.length}):</strong>\n`;
+      legacyEntities.forEach(e => {
+        output += `• ${e.metadata.name} (${e.id})\n`;
+      });
+
+      displayOutput('search-output', output);
+      console.log('Search results:', { criticalEntities, legacyEntities });
+    };
+
+    window.editAnnotations = function() {
+      // Add initial annotations
+      const noteId = annotations.addNote('repo3', 'Old note');
+      annotations.addTag('repo3', 'old-tag');
+
+      let output = `<span class="success">✓ Annotation editing</span>\n\n`;
+      output += `Initial state:\n`;
+      let anns = annotations.getAnnotations('repo3');
+      output += `Notes: ${anns.notes.length}, Tags: ${anns.tags.join(', ')}\n\n`;
+
+      // Update note
+      annotations.updateNote(noteId, 'This note has been updated');
+      
+      // Remove tag
+      annotations.removeTag('repo3', 'old-tag');
+      
+      // Add new tag
+      annotations.addTag('repo3', 'new-tag');
+
+      output += `After editing:\n`;
+      anns = annotations.getAnnotations('repo3');
+      output += `Notes: ${anns.notes[0].content}\n`;
+      output += `Tags: ${anns.tags.join(', ')}\n`;
+
+      displayOutput('edit-output', output);
+      console.log('After editing:', anns);
+    };
+
+    window.testPersistence = function() {
+      // Add annotations
+      annotations.addNote('repo2', 'Critical note that should persist');
+      annotations.addTag('repo2', 'persistent');
+
+      let output = `<span class="success">✓ Testing annotation persistence</span>\n\n`;
+      
+      output += `<strong>Step 1:</strong> Added annotations to repo2\n`;
+      let anns = annotations.getAnnotations('repo2');
+      output += `Notes: ${anns.notes.length}, Tags: ${anns.tags.length}\n\n`;
+
+      // Update entity metadata (simulate refresh)
+      const repo2 = graph.getEntity('repo2');
+      output += `<strong>Step 2:</strong> Updating entity metadata (stars: ${repo2.metadata.stars} → 150)\n`;
+      graph.updateEntity('repo2', { 
+        name: repo2.metadata.name,
+        language: 'Python',
+        stars: 150 
+      });
+      output += '\n';
+
+      // Check annotations still exist
+      output += `<strong>Step 3:</strong> Checking annotations after update\n`;
+      anns = annotations.getAnnotations('repo2');
+      output += `Notes: ${anns.notes.length} (still there ✓)\n`;
+      output += `Tags: ${anns.tags.length} (still there ✓)\n`;
+      output += `Content: "${anns.notes[0].content}"\n`;
+      output += `\n<em>✓ Annotations survived metadata update!</em>`;
+
+      displayOutput('persistence-output', output);
+      console.log('Persistence test:', anns);
+    };
+
+    console.log('Annotation examples ready. Try the buttons above!');
+  </script>
+</body>
+</html>

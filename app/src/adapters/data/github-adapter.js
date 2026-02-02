@@ -60,7 +60,7 @@ class GitHubAdapter {
    */
   async fetch(query) {
     try {
-      const { org, type = 'org', limit = 100 } = query;
+      const { org, user, type = 'org', limit = 100 } = query;
 
       let endpoint = '';
 
@@ -70,6 +70,10 @@ class GitHubAdapter {
         endpoint = `/orgs/${org}/repos?per_page=${limit}`;
       } else if (type === 'users' && org) {
         endpoint = `/orgs/${org}/members?per_page=${limit}`;
+      } else if (type === 'user-info' && user) {
+        endpoint = `/users/${user}`;
+      } else if (type === 'user-repos' && user) {
+        endpoint = `/users/${user}/repos?per_page=${limit}`;
       } else if (type === 'user') {
         endpoint = `/user`;
       } else {

@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GS - API Basics Example</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      padding: 20px;
+      max-width: 1200px;
+      margin: 0 auto;
+      background: #f5f5f5;
+    }
+    h1 {
+      color: #333;
+      border-bottom: 3px solid #007bff;
+      padding-bottom: 10px;
+    }
+    h2 {
+      color: #555;
+      margin-top: 30px;
+    }
+    code {
+      background: #fff;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+      color: #d63384;
+    }
+    pre {
+      background: #1e1e1e;
+      color: #d4d4d4;
+      padding: 15px;
+      border-radius: 5px;
+      overflow-x: auto;
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    .example-section {
+      background: white;
+      padding: 20px;
+      margin: 20px 0;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .button {
+      background: #007bff;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 14px;
+      margin: 5px;
+    }
+    .button:hover {
+      background: #0056b3;
+    }
+    .output {
+      background: #f8f9fa;
+      border: 1px solid #dee2e6;
+      padding: 15px;
+      margin-top: 10px;
+      border-radius: 5px;
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    .success {
+      color: #28a745;
+      font-weight: bold;
+    }
+    .error {
+      color: #dc3545;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <h1>🚀 GraphSense - API Basics</h1>
+  <p>
+    This example demonstrates the core CRUD operations (Create, Read, Update, Delete) 
+    using the GS API. Open the browser console (F12) to see detailed logs.
+  </p>
+
+  <div class="example-section">
+    <h2>📝 1. Create Entities</h2>
+    <p>Add entities to the graph with metadata:</p>
+    <pre><code>GS.graph.addEntity({
+  id: 'person1',
+  type: 'person',
+  metadata: { name: 'Alice', role: 'Developer' }
+})</code></pre>
+    <button class="button" onclick="createEntities()">Run Example</button>
+    <div id="create-output" class="output"></div>
+  </div>
+
+  <div class="example-section">
+    <h2>🔗 2. Create Relations</h2>
+    <p>Connect entities with relations:</p>
+    <pre><code>GS.graph.addRelation({
+  id: 'rel1',
+  type: 'works_on',
+  source: 'person1',
+  target: 'project1',
+  metadata: { since: '2024-01-01' }
+})</code></pre>
+    <button class="button" onclick="createRelations()">Run Example</button>
+    <div id="relations-output" class="output"></div>
+  </div>
+
+  <div class="example-section">
+    <h2>📖 3. Read Data</h2>
+    <p>Query entities and relations:</p>
+    <pre><code>// Get specific entity
+GS.graph.getEntity('person1')
+
+// Get all entities
+GS.graph.getEntities()
+
+// Get entities by type
+GS.graph.getEntitiesByType('person')</code></pre>
+    <button class="button" onclick="readData()">Run Example</button>
+    <div id="read-output" class="output"></div>
+  </div>
+
+  <div class="example-section">
+    <h2>✏️ 4. Update Entities</h2>
+    <p>Modify existing entity metadata:</p>
+    <pre><code>GS.graph.updateEntity('person1', {
+  name: 'Alice Smith',
+  role: 'Senior Developer'
+})</code></pre>
+    <button class="button" onclick="updateEntity()">Run Example</button>
+    <div id="update-output" class="output"></div>
+  </div>
+
+  <div class="example-section">
+    <h2>🗑️ 5. Delete Data</h2>
+    <p>Remove entities and relations:</p>
+    <pre><code>GS.graph.removeRelation('rel1')
+GS.graph.removeEntity('person1')</code></pre>
+    <button class="button" onclick="deleteData()">Run Example</button>
+    <div id="delete-output" class="output"></div>
+  </div>
+
+  <div class="example-section">
+    <h2>💾 6. Export/Import</h2>
+    <p>Serialize and load graph data:</p>
+    <pre><code>// Export
+const data = GS.graph.toJSON()
+
+// Import
+GS.graph.fromJSON(data)</code></pre>
+    <button class="button" onclick="exportImport()">Run Example</button>
+    <div id="export-output" class="output"></div>
+  </div>
+
+  <div class="example-section">
+    <h2>🔄 7. Undo/Redo</h2>
+    <p>Navigate through history:</p>
+    <pre><code>GS.undo()  // Undo last operation
+GS.redo()  // Redo undone operation</code></pre>
+    <button class="button" onclick="undoRedo()">Run Example</button>
+    <div id="undo-output" class="output"></div>
+  </div>
+
+  <script type="module">
+    import { Graph } from '../src/core/graph.js';
+    import { Schema } from '../src/core/schema.js';
+    import { EventBus } from '../src/utils/event-emitter.js';
+    import { UndoRedoManager } from '../src/core/undo-redo.js';
+
+    // Initialize system
+    const eventBus = new EventBus();
+    const schema = new Schema();
+    
+    // Register types
+    schema.registerEntityType('person', {
+      name: { type: 'string', required: true },
+      role: { type: 'string', required: false }
+    });
+    schema.registerEntityType('project', {
+      title: { type: 'string', required: true },
+      status: { type: 'string', required: false }
+    });
+    schema.registerRelationType('works_on', {
+      since: { type: 'string', required: false }
+    });
+
+    const graph = new Graph(eventBus, schema);
+    const undoRedo = new UndoRedoManager(graph, eventBus);
+
+    // Make available globally for examples
+    window.GS = {
+      graph,
+      undo: () => undoRedo.undo(),
+      redo: () => undoRedo.redo(),
+      eventBus,
+      schema
+    };
+
+    // Helper to display output
+    function displayOutput(elementId, content, isError = false) {
+      const output = document.getElementById(elementId);
+      const className = isError ? 'error' : 'success';
+      output.innerHTML = `<span class="${className}">${content}</span>`;
+    }
+
+    // Example functions
+    window.createEntities = function() {
+      try {
+        graph.addEntity({
+          id: 'person1',
+          type: 'person',
+          metadata: { name: 'Alice', role: 'Developer' }
+        });
+        graph.addEntity({
+          id: 'person2',
+          type: 'person',
+          metadata: { name: 'Bob', role: 'Designer' }
+        });
+        graph.addEntity({
+          id: 'project1',
+          type: 'project',
+          metadata: { title: 'GraphSense', status: 'active' }
+        });
+
+        displayOutput('create-output', 
+          '✓ Successfully created 3 entities: person1, person2, project1\n' +
+          'Check console for event logs.'
+        );
+        console.log('Created entities:', graph.getEntities());
+      } catch (e) {
+        displayOutput('create-output', `✗ Error: ${e.message}`, true);
+      }
+    };
+
+    window.createRelations = function() {
+      try {
+        // Ensure entities exist
+        if (!graph.hasEntity('person1')) {
+          createEntities();
+        }
+
+        graph.addRelation({
+          id: 'rel1',
+          type: 'works_on',
+          source: 'person1',
+          target: 'project1',
+          metadata: { since: '2024-01-01' }
+        });
+        graph.addRelation({
+          id: 'rel2',
+          type: 'works_on',
+          source: 'person2',
+          target: 'project1',
+          metadata: { since: '2024-02-01' }
+        });
+
+        displayOutput('relations-output',
+          '✓ Successfully created 2 relations\n' +
+          'person1 → works_on → project1\n' +
+          'person2 → works_on → project1'
+        );
+        console.log('Created relations:', graph.getRelations());
+      } catch (e) {
+        displayOutput('relations-output', `✗ Error: ${e.message}`, true);
+      }
+    };
+
+    window.readData = function() {
+      try {
+        const person1 = graph.getEntity('person1');
+        const allEntities = graph.getEntities();
+        const people = graph.getEntitiesByType('person');
+
+        let output = '✓ Read operations successful:\n\n';
+        output += `Specific entity (person1): ${JSON.stringify(person1, null, 2)}\n\n`;
+        output += `Total entities: ${allEntities.length}\n`;
+        output += `People: ${people.length}\n`;
+
+        displayOutput('read-output', output);
+        console.log('Read data:', { person1, allEntities, people });
+      } catch (e) {
+        displayOutput('read-output', `✗ Error: ${e.message}`, true);
+      }
+    };
+
+    window.updateEntity = function() {
+      try {
+        if (!graph.hasEntity('person1')) {
+          createEntities();
+        }
+
+        const before = graph.getEntity('person1');
+        graph.updateEntity('person1', {
+          name: 'Alice Smith',
+          role: 'Senior Developer'
+        });
+        const after = graph.getEntity('person1');
+
+        displayOutput('update-output',
+          '✓ Successfully updated person1\n\n' +
+          `Before: ${JSON.stringify(before.metadata, null, 2)}\n\n` +
+          `After: ${JSON.stringify(after.metadata, null, 2)}`
+        );
+        console.log('Update:', { before, after });
+      } catch (e) {
+        displayOutput('update-output', `✗ Error: ${e.message}`, true);
+      }
+    };
+
+    window.deleteData = function() {
+      try {
+        const beforeEntities = graph.getEntities().length;
+        const beforeRelations = graph.getRelations().length;
+
+        if (graph.hasRelation('rel1')) {
+          graph.removeRelation('rel1');
+        }
+        if (graph.hasEntity('person1')) {
+          graph.removeEntity('person1');
+        }
+
+        const afterEntities = graph.getEntities().length;
+        const afterRelations = graph.getRelations().length;
+
+        displayOutput('delete-output',
+          '✓ Successfully deleted data\n\n' +
+          `Entities: ${beforeEntities} → ${afterEntities}\n` +
+          `Relations: ${beforeRelations} → ${afterRelations}`
+        );
+        console.log('Deleted:', { beforeEntities, afterEntities, beforeRelations, afterRelations });
+      } catch (e) {
+        displayOutput('delete-output', `✗ Error: ${e.message}`, true);
+      }
+    };
+
+    window.exportImport = function() {
+      try {
+        // Ensure we have data
+        if (graph.getEntities().length === 0) {
+          createEntities();
+          createRelations();
+        }
+
+        // Export
+        const exported = graph.toJSON();
+        const jsonString = JSON.stringify(exported, null, 2);
+
+        // Clear graph
+        graph.reset();
+        const afterClear = graph.getEntities().length;
+
+        // Import back
+        graph.fromJSON(exported);
+        const afterImport = graph.getEntities().length;
+
+        displayOutput('export-output',
+          '✓ Successfully exported and imported\n\n' +
+          `Exported ${exported.entities.length} entities and ${exported.relations.length} relations\n` +
+          `After clear: ${afterClear} entities\n` +
+          `After import: ${afterImport} entities\n\n` +
+          `JSON (truncated):\n${jsonString.substring(0, 200)}...`
+        );
+        console.log('Export/Import:', { exported, afterClear, afterImport });
+      } catch (e) {
+        displayOutput('export-output', `✗ Error: ${e.message}`, true);
+      }
+    };
+
+    window.undoRedo = function() {
+      try {
+        // Create entity
+        graph.addEntity({
+          id: 'temp1',
+          type: 'person',
+          metadata: { name: 'Temporary' }
+        });
+        const afterAdd = graph.hasEntity('temp1');
+
+        // Undo
+        undoRedo.undo();
+        const afterUndo = graph.hasEntity('temp1');
+
+        // Redo
+        undoRedo.redo();
+        const afterRedo = graph.hasEntity('temp1');
+
+        displayOutput('undo-output',
+          '✓ Undo/Redo operations successful\n\n' +
+          `After add: entity exists = ${afterAdd}\n` +
+          `After undo: entity exists = ${afterUndo}\n` +
+          `After redo: entity exists = ${afterRedo}`
+        );
+        console.log('Undo/Redo:', { afterAdd, afterUndo, afterRedo });
+      } catch (e) {
+        displayOutput('undo-output', `✗ Error: ${e.message}`, true);
+      }
+    };
+
+    // Log all events
+    eventBus.on('*', (event) => {
+      console.log(`[Event] ${event.type}:`, event.data);
+    });
+
+    console.log('GS API initialized. Try the examples or use GS.graph in the console!');
+  </script>
+</body>
+</html>

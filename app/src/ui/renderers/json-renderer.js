@@ -2,7 +2,7 @@
  * JSONRenderer - Renders graph as formatted JSON
  *
  * Useful for debugging and viewing raw graph state.
- * Updates on mutations, supports search/filter.
+ * Provides editable, pretty-printed JSON view.
  *
  * See: ../../doc/modules/ui/RendererContract.md
  */
@@ -13,9 +13,10 @@ export class JSONRenderer extends BaseRenderer {
   constructor(options = {}) {
     super(options);
     this.currentSnapshot = null;
-    this.expanded = new Set();
     this.searchTerm = '';
     this.searchInput = null;
+    this.jsonTextarea = null;
+    this.isEditable = true;
   }
 
   init(container, options = {}) {
@@ -23,32 +24,78 @@ export class JSONRenderer extends BaseRenderer {
     if (!container) return;
 
     container.innerHTML = '';
-    container.className = 'gs-json-renderer';
+    container.className = 'gs-json-renderer renderer-content';
     container.style.cssText = `
       background: ${this.theme === 'dark' ? '#1e1e1e' : '#f5f5f5'};
       color: ${this.theme === 'dark' ? '#d4d4d4' : '#333'};
       padding: 0;
-      font-family: 'Courier New', monospace;
+      font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
       font-size: 13px;
-      overflow: hidden;
       line-height: 1.6;
-      display: flex;
       flex-direction: column;
     `;
 
-    // Add search bar
-    this._createSearchBar();
+    // Add toolbar
+    this._createToolbar();
     
-    // Add content container
+    // Add content container with textarea
     const contentDiv = document.createElement('div');
     contentDiv.className = 'json-content';
-    contentDiv.style.cssText = 'flex: 1; overflow-y: auto; padding: 20px;';
+    contentDiv.style.cssText = 'flex: 1; overflow: hidden; padding: 0; position: relative;';
+    
+    // Create editable textarea
+    this.jsonTextarea = document.createElement('textarea');
+    this.jsonTextarea.className = 'json-textarea';
+    this.jsonTextarea.spellcheck = false;
+    this.jsonTextarea.style.cssText = `
+      width: 100%;
+      height: 100%;
+      padding: 20px;
+      border: none;
+      outline: none;
+      resize: none;
+      background: ${this.theme === 'dark' ? '#1e1e1e' : '#f5f5f5'};
+      color: ${this.theme === 'dark' ? '#d4d4d4' : '#333'};
+      font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+      font-size: 13px;
+      line-height: 1.6;
+      tab-size: 2;
+      -moz-tab-size: 2;
+    `;
+    
+    // Handle tab key for indentation
+    this.jsonTextarea.addEventListener('keydown', (e) => {
+      if (e.key === 'Tab') {
+        e.preventDefault();
+        const start = this.jsonTextarea.selectionStart;
+        const end = this.jsonTextarea.selectionEnd;
+        const value = this.jsonTextarea.value;
+        
+        // Insert two spaces for tab
+        this.jsonTextarea.value = value.substring(0, start) + '  ' + value.substring(end);
+        this.jsonTextarea.selectionStart = this.jsonTextarea.selectionEnd = start + 2;
+      }
+    });
+    
+    // Auto-save on blur or Ctrl+S
+    this.jsonTextarea.addEventListener('blur', () => {
+      this._applyChanges();
+    });
+    
+    this.jsonTextarea.addEventListener('keydown', (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault();
+        this._applyChanges();
+      }
+    });
+    
+    contentDiv.appendChild(this.jsonTextarea);
     container.appendChild(contentDiv);
   }
 
-  _createSearchBar() {
-    const searchBar = document.createElement('div');
-    searchBar.style.cssText = `
+  _createToolbar() {
+    const toolbar = document.createElement('div');
+    toolbar.style.cssText = `
       padding: 10px;
       background: ${this.theme === 'dark' ? '#2d2d2d' : '#e0e0e0'};
       border-bottom: 1px solid ${this.theme === 'dark' ? '#444' : '#ccc'};
@@ -57,9 +104,10 @@ export class JSONRenderer extends BaseRenderer {
       align-items: center;
     `;
 
+    // Search input
     this.searchInput = document.createElement('input');
     this.searchInput.type = 'text';
-    this.searchInput.placeholder = 'Search JSON...';
+    this.searchInput.placeholder = 'Search...';
     this.searchInput.style.cssText = `
       flex: 1;
       padding: 6px 12px;
@@ -67,212 +115,189 @@ export class JSONRenderer extends BaseRenderer {
       background: ${this.theme === 'dark' ? '#1e1e1e' : '#fff'};
       color: ${this.theme === 'dark' ? '#d4d4d4' : '#333'};
       border-radius: 4px;
-      font-family: 'Courier New', monospace;
+      font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+      font-size: 12px;
     `;
 
     this.searchInput.addEventListener('input', (e) => {
       this.searchTerm = e.target.value;
-      this._highlightSearchResults();
+      this._highlightSearch();
     });
 
-    const expandBtn = document.createElement('button');
-    expandBtn.textContent = 'Expand All';
-    expandBtn.style.cssText = `
+    // Format button
+    const formatBtn = this._createButton('Format', () => {
+      this._formatJSON();
+    });
+
+    // Compact button
+    const compactBtn = this._createButton('Compact', () => {
+      this._compactJSON();
+    });
+
+    // Copy button
+    const copyBtn = this._createButton('Copy', () => {
+      this._copyToClipboard();
+    });
+
+    // Apply button
+    const applyBtn = this._createButton('Apply Changes', () => {
+      this._applyChanges();
+    }, '#667eea');
+
+    toolbar.appendChild(this.searchInput);
+    toolbar.appendChild(formatBtn);
+    toolbar.appendChild(compactBtn);
+    toolbar.appendChild(copyBtn);
+    toolbar.appendChild(applyBtn);
+
+    this.container.appendChild(toolbar);
+  }
+
+  _createButton(text, onClick, bgColor = null) {
+    const btn = document.createElement('button');
+    btn.textContent = text;
+    btn.style.cssText = `
       padding: 6px 12px;
-      background: ${this.theme === 'dark' ? '#3a3a3a' : '#ddd'};
-      color: ${this.theme === 'dark' ? '#d4d4d4' : '#333'};
+      background: ${bgColor || (this.theme === 'dark' ? '#3a3a3a' : '#ddd')};
+      color: ${bgColor ? '#fff' : (this.theme === 'dark' ? '#d4d4d4' : '#333')};
       border: 1px solid ${this.theme === 'dark' ? '#555' : '#aaa'};
       border-radius: 4px;
       cursor: pointer;
+      font-size: 12px;
+      font-family: system-ui, sans-serif;
+      white-space: nowrap;
     `;
-    expandBtn.addEventListener('click', () => this._expandAll());
-
-    const collapseBtn = document.createElement('button');
-    collapseBtn.textContent = 'Collapse All';
-    collapseBtn.style.cssText = expandBtn.style.cssText;
-    collapseBtn.addEventListener('click', () => this._collapseAll());
-
-    searchBar.appendChild(this.searchInput);
-    searchBar.appendChild(expandBtn);
-    searchBar.appendChild(collapseBtn);
-
-    this.container.appendChild(searchBar);
+    
+    btn.addEventListener('mouseenter', () => {
+      btn.style.opacity = '0.8';
+    });
+    
+    btn.addEventListener('mouseleave', () => {
+      btn.style.opacity = '1';
+    });
+    
+    btn.addEventListener('click', onClick);
+    return btn;
   }
 
   render(graphSnapshot) {
     this.currentSnapshot = graphSnapshot;
-    if (!this.container) return;
+    if (!this.jsonTextarea || !this.container) return;
 
-    const contentDiv = this.container.querySelector('.json-content');
-    if (!contentDiv) return;
+    if (!graphSnapshot) {
+      this.jsonTextarea.value = '// No data to display';
+      return;
+    }
 
+    // Pretty print the JSON
     const json = JSON.stringify(graphSnapshot, null, 2);
-    contentDiv.innerHTML = '';
+    this.jsonTextarea.value = json;
+    
+    // Apply syntax highlighting if search is active
+    if (this.searchTerm) {
+      this._highlightSearch();
+    }
+  }
 
-    // Create interactive JSON with expand/collapse
-    const pre = document.createElement('pre');
-    pre.style.cssText = `
-      margin: 0;
-      padding: 0;
-      background: inherit;
-      color: inherit;
-      word-wrap: break-word;
-      white-space: pre-wrap;
+  _formatJSON() {
+    try {
+      const json = JSON.parse(this.jsonTextarea.value);
+      this.jsonTextarea.value = JSON.stringify(json, null, 2);
+      this._showMessage('Formatted successfully', 'success');
+    } catch (err) {
+      this._showMessage('Invalid JSON: ' + err.message, 'error');
+    }
+  }
+
+  _compactJSON() {
+    try {
+      const json = JSON.parse(this.jsonTextarea.value);
+      this.jsonTextarea.value = JSON.stringify(json);
+      this._showMessage('Compacted successfully', 'success');
+    } catch (err) {
+      this._showMessage('Invalid JSON: ' + err.message, 'error');
+    }
+  }
+
+  _copyToClipboard() {
+    this.jsonTextarea.select();
+    document.execCommand('copy');
+    this._showMessage('Copied to clipboard', 'success');
+  }
+
+  _applyChanges() {
+    try {
+      const json = JSON.parse(this.jsonTextarea.value);
+      this.currentSnapshot = json;
+      this._showMessage('Changes applied', 'success');
+      
+      // Emit event to notify of changes
+      this._emitEvent('dataChanged', { data: json });
+    } catch (err) {
+      this._showMessage('Invalid JSON: ' + err.message, 'error');
+    }
+  }
+
+  _highlightSearch() {
+    if (!this.searchTerm || !this.jsonTextarea) return;
+    
+    const value = this.jsonTextarea.value;
+    const index = value.toLowerCase().indexOf(this.searchTerm.toLowerCase());
+    
+    if (index !== -1) {
+      this.jsonTextarea.focus();
+      this.jsonTextarea.setSelectionRange(index, index + this.searchTerm.length);
+      this.jsonTextarea.scrollTop = this.jsonTextarea.scrollHeight * (index / value.length);
+    }
+  }
+
+  _showMessage(text, type = 'info') {
+    // Create temporary message overlay
+    const msg = document.createElement('div');
+    msg.textContent = text;
+    msg.style.cssText = `
+      position: absolute;
+      top: 60px;
+      right: 20px;
+      padding: 12px 20px;
+      background: ${type === 'error' ? '#f56565' : type === 'success' ? '#48bb78' : '#4299e1'};
+      color: white;
+      border-radius: 4px;
+      font-size: 13px;
+      z-index: 1000;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      animation: slideIn 0.3s ease;
     `;
     
-    pre.innerHTML = this._formatJSON(graphSnapshot, 0);
-    contentDiv.appendChild(pre);
-
-    // Apply search highlighting if there's a search term
-    if (this.searchTerm) {
-      this._highlightSearchResults();
-    }
-  }
-
-  _formatJSON(obj, depth = 0) {
-    const indent = '  '.repeat(depth);
-    const nextIndent = '  '.repeat(depth + 1);
+    this.container.style.position = 'relative';
+    this.container.appendChild(msg);
     
-    if (obj === null) return '<span style="color: #569cd6;">null</span>';
-    if (obj === undefined) return '<span style="color: #569cd6;">undefined</span>';
-    
-    const type = typeof obj;
-    
-    if (type === 'string') {
-      return `<span style="color: #ce9178;">"${this._escapeHtml(obj)}"</span>`;
-    }
-    if (type === 'number' || type === 'boolean') {
-      return `<span style="color: #b5cea8;">${obj}</span>`;
-    }
-    
-    if (Array.isArray(obj)) {
-      if (obj.length === 0) return '[]';
-      
-      const isExpanded = this.expanded.has(`${depth}-array`);
-      const toggleId = `toggle-${depth}-${Math.random().toString(36).substr(2, 9)}`;
-      
-      let html = `<span class="json-toggle" data-toggle-id="${toggleId}" style="cursor: pointer; user-select: none;">`;
-      html += isExpanded ? '▼' : '▶';
-      html += '</span> [';
-      
-      if (isExpanded) {
-        html += '\n';
-        obj.forEach((item, i) => {
-          html += nextIndent + this._formatJSON(item, depth + 1);
-          if (i < obj.length - 1) html += ',';
-          html += '\n';
-        });
-        html += indent + ']';
-      } else {
-        html += ` ... ${obj.length} items ]`;
-      }
-      
-      return html;
-    }
-    
-    if (type === 'object') {
-      const keys = Object.keys(obj);
-      if (keys.length === 0) return '{}';
-      
-      const isExpanded = this.expanded.has(`${depth}-object-${keys[0]}`);
-      const toggleId = `toggle-${depth}-${Math.random().toString(36).substr(2, 9)}`;
-      
-      let html = `<span class="json-toggle" data-toggle-id="${toggleId}" style="cursor: pointer; user-select: none;">`;
-      html += isExpanded ? '▼' : '▶';
-      html += '</span> {';
-      
-      if (isExpanded) {
-        html += '\n';
-        keys.forEach((key, i) => {
-          html += nextIndent + `<span style="color: #9cdcfe;">"${this._escapeHtml(key)}"</span>: `;
-          html += this._formatJSON(obj[key], depth + 1);
-          if (i < keys.length - 1) html += ',';
-          html += '\n';
-        });
-        html += indent + '}';
-      } else {
-        html += ` ... ${keys.length} keys }`;
-      }
-      
-      return html;
-    }
-    
-    return String(obj);
-  }
-
-  _escapeHtml(str) {
-    const div = document.createElement('div');
-    div.textContent = str;
-    return div.innerHTML;
-  }
-
-  _expandAll() {
-    if (!this.currentSnapshot) return;
-    this.expanded.clear();
-    this._addAllPaths(this.currentSnapshot, 0, '');
-    this.render(this.currentSnapshot);
-  }
-
-  _collapseAll() {
-    this.expanded.clear();
-    if (this.currentSnapshot) {
-      this.render(this.currentSnapshot);
-    }
-  }
-
-  _addAllPaths(obj, depth, prefix) {
-    if (Array.isArray(obj)) {
-      this.expanded.add(`${depth}-array${prefix}`);
-      obj.forEach((item, i) => {
-        if (typeof item === 'object' && item !== null) {
-          this._addAllPaths(item, depth + 1, `${prefix}-${i}`);
-        }
-      });
-    } else if (typeof obj === 'object' && obj !== null) {
-      const keys = Object.keys(obj);
-      if (keys.length > 0) {
-        this.expanded.add(`${depth}-object-${keys[0]}${prefix}`);
-        keys.forEach(key => {
-          if (typeof obj[key] === 'object' && obj[key] !== null) {
-            this._addAllPaths(obj[key], depth + 1, `${prefix}-${key}`);
-          }
-        });
-      }
-    }
-  }
-
-  _highlightSearchResults() {
-    if (!this.searchTerm || !this.container) return;
-    
-    const contentDiv = this.container.querySelector('.json-content');
-    if (!contentDiv) return;
-    
-    const text = contentDiv.textContent;
-    if (!text.toLowerCase().includes(this.searchTerm.toLowerCase())) return;
-    
-    // Re-render with search highlighting
-    // In production, would implement more sophisticated highlighting
-    this.render(this.currentSnapshot);
+    setTimeout(() => {
+      msg.style.animation = 'slideOut 0.3s ease';
+      setTimeout(() => msg.remove(), 300);
+    }, 2000);
   }
 
   update(patch) {
     // Re-render on mutation
     if (this.currentSnapshot) {
-      // In a real implementation, apply patch to snapshot
-      // For now, just log the update
       console.log('[JSONRenderer] update:', patch);
+      // In production, apply patch to snapshot
+      // For now, just keep current value
     }
   }
 
   highlight(targetType, targetId, kind = 'select') {
     super.highlight(targetType, targetId, kind);
-    // Visual highlight by wrapping in styled span (in real impl)
+    // Could highlight the JSON key if we wanted to
     console.log(`[JSONRenderer] highlight ${targetId} as ${kind}`);
   }
 
   setMode(mode) {
     super.setMode(mode);
-    // Could change styling based on mode
+    if (this.jsonTextarea) {
+      this.jsonTextarea.readOnly = (mode === 'view');
+    }
   }
 
   setTheme(theme) {
@@ -282,13 +307,19 @@ export class JSONRenderer extends BaseRenderer {
       this.container.style.background = theme === 'dark' ? '#1e1e1e' : '#f5f5f5';
       this.container.style.color = theme === 'dark' ? '#d4d4d4' : '#333';
       
-      // Update search bar if exists
-      const searchBar = this.container.querySelector('div');
-      if (searchBar && this.searchInput) {
-        searchBar.style.background = theme === 'dark' ? '#2d2d2d' : '#e0e0e0';
-        searchBar.style.borderBottom = `1px solid ${theme === 'dark' ? '#444' : '#ccc'}`;
+      if (this.jsonTextarea) {
+        this.jsonTextarea.style.background = theme === 'dark' ? '#1e1e1e' : '#f5f5f5';
+        this.jsonTextarea.style.color = theme === 'dark' ? '#d4d4d4' : '#333';
+      }
+      
+      // Update toolbar if exists
+      const toolbar = this.container.querySelector('div');
+      if (toolbar && this.searchInput) {
+        toolbar.style.background = theme === 'dark' ? '#2d2d2d' : '#e0e0e0';
+        toolbar.style.borderBottom = `1px solid ${theme === 'dark' ? '#444' : '#ccc'}`;
         this.searchInput.style.background = theme === 'dark' ? '#1e1e1e' : '#fff';
         this.searchInput.style.color = theme === 'dark' ? '#d4d4d4' : '#333';
+        this.searchInput.style.borderColor = theme === 'dark' ? '#555' : '#aaa';
       }
     }
   }
@@ -296,7 +327,15 @@ export class JSONRenderer extends BaseRenderer {
   focus(targetType, targetId) {
     super.focus(targetType, targetId);
     // Could scroll to the entity/relation in JSON
-    console.log(`[JSONRenderer] focus ${targetType} ${targetId}`);
+    if (this.jsonTextarea) {
+      const value = this.jsonTextarea.value;
+      const index = value.indexOf(`"id": "${targetId}"`);
+      if (index !== -1) {
+        this.jsonTextarea.focus();
+        this.jsonTextarea.setSelectionRange(index, index + targetId.length + 8);
+        this.jsonTextarea.scrollTop = this.jsonTextarea.scrollHeight * (index / value.length);
+      }
+    }
   }
 
   drillDown(entityId) {
@@ -312,9 +351,9 @@ export class JSONRenderer extends BaseRenderer {
   destroy() {
     super.destroy();
     this.currentSnapshot = null;
-    this.expanded.clear();
     this.searchTerm = '';
     this.searchInput = null;
+    this.jsonTextarea = null;
   }
 }
 

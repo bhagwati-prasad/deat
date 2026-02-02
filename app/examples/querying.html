@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GS - QueryEngine Example</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      padding: 20px;
+      max-width: 1200px;
+      margin: 0 auto;
+      background: #f5f5f5;
+    }
+    h1 {
+      color: #333;
+      border-bottom: 3px solid #28a745;
+      padding-bottom: 10px;
+    }
+    h2 {
+      color: #555;
+      margin-top: 30px;
+    }
+    .example-section {
+      background: white;
+      padding: 20px;
+      margin: 20px 0;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    pre {
+      background: #1e1e1e;
+      color: #d4d4d4;
+      padding: 15px;
+      border-radius: 5px;
+      overflow-x: auto;
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+    }
+    .button {
+      background: #28a745;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 14px;
+      margin: 5px;
+    }
+    .button:hover {
+      background: #218838;
+    }
+    .output {
+      background: #f8f9fa;
+      border: 1px solid #dee2e6;
+      padding: 15px;
+      margin-top: 10px;
+      border-radius: 5px;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+    .success { color: #28a745; }
+    .highlight { background: #fff3cd; padding: 2px 4px; }
+  </style>
+</head>
+<body>
+  <h1>🔍 GraphSense - QueryEngine Examples</h1>
+  <p>
+    Demonstrates powerful graph querying capabilities including filtering, 
+    traversal, path finding, and aggregation.
+  </p>
+
+  <div class="example-section">
+    <h2>🎯 1. Simple Filtering</h2>
+    <p>Find entities by type and metadata:</p>
+    <pre><code>// Find all developers
+GS.query.findEntities({
+  type: 'person',
+  filter: e => e.metadata.role === 'Developer'
+})</code></pre>
+    <button class="button" onclick="simpleFilter()">Run Example</button>
+    <div id="filter-output" class="output"></div>
+  </div>
+
+  <div class="example-section">
+    <h2>🌐 2. Graph Traversal</h2>
+    <p>Explore connected nodes:</p>
+    <pre><code>// Find all projects a person works on
+GS.query.traverse('person1', {
+  direction: 'outgoing',
+  relationType: 'works_on',
+  maxDepth: 2
+})</code></pre>
+    <button class="button" onclick="traverseGraph()">Run Example</button>
+    <div id="traverse-output" class="output"></div>
+  </div>
+
+  <div class="example-section">
+    <h2>🛤️ 3. Path Finding</h2>
+    <p>Find paths between two entities:</p>
+    <pre><code>// Find shortest path
+GS.query.findPath('person1', 'org1', {
+  maxDepth: 4
+})</code></pre>
+    <button class="button" onclick="findPath()">Run Example</button>
+    <div id="path-output" class="output"></div>
+  </div>
+
+  <div class="example-section">
+    <h2>📊 4. Aggregation</h2>
+    <p>Compute statistics over entities:</p>
+    <pre><code>// Count entities by type
+GS.query.aggregate('count', {
+  groupBy: 'type'
+})</code></pre>
+    <button class="button" onclick="aggregate()">Run Example</button>
+    <div id="aggregate-output" class="output"></div>
+  </div>
+
+  <div class="example-section">
+    <h2>🔗 5. Relation Queries</h2>
+    <p>Query relations between entities:</p>
+    <pre><code>// Find all 'works_on' relations
+GS.query.findRelations({
+  type: 'works_on',
+  filter: r => r.metadata.since >= '2024-01-01'
+})</code></pre>
+    <button class="button" onclick="relationQueries()">Run Example</button>
+    <div id="relation-output" class="output"></div>
+  </div>
+
+  <div class="example-section">
+    <h2>🎨 6. Complex Queries</h2>
+    <p>Combine multiple filters and conditions:</p>
+    <pre><code>// Find active projects with >2 contributors
+GS.query.findEntities({
+  type: 'project',
+  filter: e => {
+    const contributors = GS.query.getIncoming(e.id, 'works_on');
+    return e.metadata.status === 'active' && 
+           contributors.length > 2;
+  }
+})</code></pre>
+    <button class="button" onclick="complexQuery()">Run Example</button>
+    <div id="complex-output" class="output"></div>
+  </div>
+
+  <script type="module">
+    import { Graph } from '../src/core/graph.js';
+    import { Schema } from '../src/core/schema.js';
+    import { EventBus } from '../src/utils/event-emitter.js';
+    import { QueryEngine } from '../src/core/query-engine.js';
+
+    // Initialize
+    const eventBus = new EventBus();
+    const schema = new Schema();
+    
+    // Register types
+    schema.registerEntityType('person', {
+      name: { type: 'string', required: true },
+      role: { type: 'string', required: false }
+    });
+    schema.registerEntityType('project', {
+      title: { type: 'string', required: true },
+      status: { type: 'string', required: false }
+    });
+    schema.registerEntityType('organization', {
+      name: { type: 'string', required: true }
+    });
+    schema.registerRelationType('works_on', {
+      since: { type: 'string', required: false }
+    });
+    schema.registerRelationType('belongs_to', {});
+
+    const graph = new Graph(eventBus, schema);
+    const queryEngine = new QueryEngine(graph);
+
+    // Create sample data
+    function setupSampleData() {
+      graph.reset();
+      
+      // People
+      graph.addEntity({ id: 'person1', type: 'person', metadata: { name: 'Alice', role: 'Developer' } });
+      graph.addEntity({ id: 'person2', type: 'person', metadata: { name: 'Bob', role: 'Developer' } });
+      graph.addEntity({ id: 'person3', type: 'person', metadata: { name: 'Carol', role: 'Designer' } });
+      graph.addEntity({ id: 'person4', type: 'person', metadata: { name: 'Dave', role: 'Manager' } });
+      
+      // Projects
+      graph.addEntity({ id: 'proj1', type: 'project', metadata: { title: 'GraphSense', status: 'active' } });
+      graph.addEntity({ id: 'proj2', type: 'project', metadata: { title: 'DataViz', status: 'active' } });
+      graph.addEntity({ id: 'proj3', type: 'project', metadata: { title: 'Legacy', status: 'archived' } });
+      
+      // Organization
+      graph.addEntity({ id: 'org1', type: 'organization', metadata: { name: 'TechCorp' } });
+      
+      // Relations: people → projects
+      graph.addRelation({ id: 'r1', type: 'works_on', source: 'person1', target: 'proj1', metadata: { since: '2024-01-01' } });
+      graph.addRelation({ id: 'r2', type: 'works_on', source: 'person2', target: 'proj1', metadata: { since: '2024-02-01' } });
+      graph.addRelation({ id: 'r3', type: 'works_on', source: 'person3', target: 'proj1', metadata: { since: '2024-03-01' } });
+      graph.addRelation({ id: 'r4', type: 'works_on', source: 'person1', target: 'proj2', metadata: { since: '2023-06-01' } });
+      graph.addRelation({ id: 'r5', type: 'works_on', source: 'person4', target: 'proj3', metadata: { since: '2022-01-01' } });
+      
+      // Relations: people → org
+      graph.addRelation({ id: 'r6', type: 'belongs_to', source: 'person1', target: 'org1', metadata: {} });
+      graph.addRelation({ id: 'r7', type: 'belongs_to', source: 'person2', target: 'org1', metadata: {} });
+      graph.addRelation({ id: 'r8', type: 'belongs_to', source: 'person3', target: 'org1', metadata: {} });
+      graph.addRelation({ id: 'r9', type: 'belongs_to', source: 'person4', target: 'org1', metadata: {} });
+    }
+
+    setupSampleData();
+
+    // Make available globally
+    window.GS = { graph, query: queryEngine };
+
+    function displayOutput(elementId, content) {
+      document.getElementById(elementId).innerHTML = content;
+    }
+
+    window.simpleFilter = function() {
+      const developers = queryEngine.findEntities({
+        type: 'person',
+        filter: e => e.metadata.role === 'Developer'
+      });
+
+      let output = `<span class="success">✓ Found ${developers.length} developers:</span>\n\n`;
+      developers.forEach(d => {
+        output += `• ${d.metadata.name} (${d.id})\n`;
+      });
+
+      displayOutput('filter-output', output);
+      console.log('Developers:', developers);
+    };
+
+    window.traverseGraph = function() {
+      const result = queryEngine.traverse('person1', {
+        direction: 'outgoing',
+        relationType: 'works_on',
+        maxDepth: 2
+      });
+
+      let output = `<span class="success">✓ Traversal from person1:</span>\n\n`;
+      output += `Found ${result.entities.length} connected entities:\n`;
+      result.entities.forEach(e => {
+        output += `• ${e.type}: ${e.metadata.title || e.metadata.name} (${e.id})\n`;
+      });
+
+      displayOutput('traverse-output', output);
+      console.log('Traversal result:', result);
+    };
+
+    window.findPath = function() {
+      const paths = queryEngine.findPath('person1', 'org1', { maxDepth: 4 });
+
+      let output = `<span class="success">✓ Found ${paths.length} path(s) from person1 to org1:</span>\n\n`;
+      paths.forEach((path, i) => {
+        output += `Path ${i + 1} (length ${path.length}):\n`;
+        path.forEach((step, j) => {
+          if (j > 0) output += ' → ';
+          output += step.type === 'entity' ? step.id : `[${step.relationType}]`;
+        });
+        output += '\n\n';
+      });
+
+      displayOutput('path-output', output);
+      console.log('Paths:', paths);
+    };
+
+    window.aggregate = function() {
+      // Count by type
+      const byType = {};
+      graph.getEntities().forEach(e => {
+        byType[e.type] = (byType[e.type] || 0) + 1;
+      });
+
+      // Count by role (for people)
+      const byRole = {};
+      graph.getEntitiesByType('person').forEach(p => {
+        const role = p.metadata.role || 'unknown';
+        byRole[role] = (byRole[role] || 0) + 1;
+      });
+
+      let output = `<span class="success">✓ Aggregation results:</span>\n\n`;
+      output += `<strong>By Entity Type:</strong>\n`;
+      Object.entries(byType).forEach(([type, count]) => {
+        output += `• ${type}: ${count}\n`;
+      });
+      output += `\n<strong>By Role (people only):</strong>\n`;
+      Object.entries(byRole).forEach(([role, count]) => {
+        output += `• ${role}: ${count}\n`;
+      });
+
+      displayOutput('aggregate-output', output);
+      console.log('Aggregation:', { byType, byRole });
+    };
+
+    window.relationQueries = function() {
+      const worksOnRelations = queryEngine.findRelations({
+        type: 'works_on',
+        filter: r => r.metadata.since && r.metadata.since >= '2024-01-01'
+      });
+
+      let output = `<span class="success">✓ Found ${worksOnRelations.length} 'works_on' relations since 2024:</span>\n\n`;
+      worksOnRelations.forEach(r => {
+        const source = graph.getEntity(r.source);
+        const target = graph.getEntity(r.target);
+        output += `• ${source.metadata.name} → ${target.metadata.title} (since ${r.metadata.since})\n`;
+      });
+
+      displayOutput('relation-output', output);
+      console.log('Relations:', worksOnRelations);
+    };
+
+    window.complexQuery = function() {
+      const activeProjects = queryEngine.findEntities({
+        type: 'project',
+        filter: e => e.metadata.status === 'active'
+      });
+
+      const projectsWithMultipleContributors = activeProjects.filter(proj => {
+        const contributors = queryEngine.findRelations({
+          type: 'works_on',
+          filter: r => r.target === proj.id
+        });
+        return contributors.length >= 2;
+      });
+
+      let output = `<span class="success">✓ Complex query results:</span>\n\n`;
+      output += `Active projects: ${activeProjects.length}\n`;
+      output += `Projects with ≥2 contributors: ${projectsWithMultipleContributors.length}\n\n`;
+      
+      projectsWithMultipleContributors.forEach(proj => {
+        const contributors = queryEngine.findRelations({
+          type: 'works_on',
+          filter: r => r.target === proj.id
+        });
+        output += `<span class="highlight">${proj.metadata.title}</span>:\n`;
+        contributors.forEach(rel => {
+          const person = graph.getEntity(rel.source);
+          output += `  • ${person.metadata.name} (${person.metadata.role})\n`;
+        });
+        output += '\n';
+      });
+
+      displayOutput('complex-output', output);
+      console.log('Complex query:', projectsWithMultipleContributors);
+    };
+
+    console.log('QueryEngine examples ready. Sample data created.');
+    console.log('Graph has:', graph.getEntities().length, 'entities and', graph.getRelations().length, 'relations');
+  </script>
+</body>
+</html>

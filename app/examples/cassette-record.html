@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GS - Cassette Recording & Playback</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      padding: 20px;
+      max-width: 1200px;
+      margin: 0 auto;
+      background: #f5f5f5;
+    }
+    h1 {
+      color: #333;
+      border-bottom: 3px solid #dc3545;
+      padding-bottom: 10px;
+    }
+    .container {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin: 20px 0;
+    }
+    .panel {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    h2 { color: #555; margin-top: 0; }
+    .button {
+      background: #dc3545;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 14px;
+      margin: 5px;
+    }
+    .button:hover { background: #c82333; }
+    .button:disabled {
+      background: #6c757d;
+      cursor: not-allowed;
+    }
+    .button-group {
+      display: flex;
+      gap: 10px;
+      margin: 10px 0;
+    }
+    .status {
+      background: #f8f9fa;
+      border: 1px solid #dee2e6;
+      padding: 15px;
+      margin: 10px 0;
+      border-radius: 5px;
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+    }
+    .frame {
+      background: #fff3cd;
+      border-left: 4px solid #ffc107;
+      padding: 10px;
+      margin: 5px 0;
+      border-radius: 3px;
+    }
+    .playing { animation: pulse 1s infinite; }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.7; }
+    }
+    pre {
+      background: #1e1e1e;
+      color: #d4d4d4;
+      padding: 15px;
+      border-radius: 5px;
+      overflow-x: auto;
+      font-size: 12px;
+    }
+    .timeline {
+      height: 40px;
+      background: #e9ecef;
+      border-radius: 5px;
+      position: relative;
+      margin: 10px 0;
+    }
+    .progress-bar {
+      height: 100%;
+      background: #dc3545;
+      border-radius: 5px;
+      transition: width 0.3s;
+    }
+  </style>
+</head>
+<body>
+  <h1>🎬 GraphSense - Cassette Recording & Playback</h1>
+  <p>
+    Record interaction sequences (selections, highlights, navigation) and play them back
+    like a guided walkthrough or demo.
+  </p>
+
+  <div class="container">
+    <!-- Recording Panel -->
+    <div class="panel">
+      <h2>📹 Recording</h2>
+      <p>Create interaction sequences:</p>
+      
+      <div class="button-group">
+        <button class="button" onclick="startRecording()" id="btn-start-record">Start Recording</button>
+        <button class="button" onclick="stopRecording()" id="btn-stop-record" disabled>Stop Recording</button>
+      </div>
+
+      <div id="recording-status" class="status">
+        Status: <strong>Not Recording</strong><br>
+        Frames: <span id="frame-count">0</span>
+      </div>
+
+      <h3>Simulate Interactions:</h3>
+      <div class="button-group">
+        <button class="button" onclick="selectEntity('repo1')" id="btn-select1">Select Repo 1</button>
+        <button class="button" onclick="selectEntity('repo2')" id="btn-select2">Select Repo 2</button>
+        <button class="button" onclick="highlightEntity('repo3')" id="btn-highlight">Highlight Repo 3</button>
+      </div>
+
+      <div id="recorded-frames"></div>
+    </div>
+
+    <!-- Playback Panel -->
+    <div class="panel">
+      <h2>▶️ Playback</h2>
+      <p>Play recorded cassettes:</p>
+      
+      <div class="button-group">
+        <button class="button" onclick="loadCassette()" id="btn-load">Load Cassette</button>
+        <button class="button" onclick="playCassette()" id="btn-play" disabled>Play</button>
+        <button class="button" onclick="pauseCassette()" id="btn-pause" disabled>Pause</button>
+        <button class="button" onclick="stopCassette()" id="btn-stop" disabled>Stop</button>
+      </div>
+
+      <div class="timeline">
+        <div class="progress-bar" id="progress-bar" style="width: 0%"></div>
+      </div>
+
+      <div id="playback-status" class="status">
+        Status: <strong>No Cassette Loaded</strong><br>
+        Current Frame: <span id="current-frame">-</span> / <span id="total-frames">-</span><br>
+        Speed: <span id="playback-speed">1x</span>
+      </div>
+
+      <h3>Current Frame:</h3>
+      <div id="current-frame-display"></div>
+    </div>
+  </div>
+
+  <!-- Cassette Data Panel -->
+  <div class="panel" style="margin-top: 20px;">
+    <h2>💾 Cassette Data</h2>
+    <p>View and export recorded cassettes:</p>
+    <button class="button" onclick="exportCassette()">Export Cassette JSON</button>
+    <pre id="cassette-json">No cassette data yet</pre>
+  </div>
+
+  <script type="module">
+    import { Graph } from '../src/core/graph.js';
+    import { Schema } from '../src/core/schema.js';
+    import { EventBus } from '../src/utils/event-emitter.js';
+    import { CassettePlayer } from '../src/services/cassette-player.js';
+
+    // Initialize
+    const eventBus = new EventBus();
+    const schema = new Schema();
+    
+    schema.registerEntityType('repository', {
+      name: { type: 'string', required: true }
+    });
+
+    const graph = new Graph(eventBus, schema);
+    const player = new CassettePlayer(graph, eventBus);
+
+    // Create sample entities
+    graph.addEntity({ id: 'repo1', type: 'repository', metadata: { name: 'GraphSense' } });
+    graph.addEntity({ id: 'repo2', type: 'repository', metadata: { name: 'DataViz' } });
+    graph.addEntity({ id: 'repo3', type: 'repository', metadata: { name: 'LegacyApp' } });
+
+    // Recording state
+    let isRecording = false;
+    let recordedFrames = [];
+    let recordingStartTime = 0;
+
+    // Playback state
+    let currentFrameIndex = 0;
+
+    // Update UI
+    function updateRecordingUI() {
+      document.getElementById('btn-start-record').disabled = isRecording;
+      document.getElementById('btn-stop-record').disabled = !isRecording;
+      document.getElementById('recording-status').innerHTML = `
+        Status: <strong>${isRecording ? 'Recording...' : 'Not Recording'}</strong><br>
+        Frames: <span id="frame-count">${recordedFrames.length}</span>
+      `;
+      
+      if (isRecording) {
+        document.getElementById('recording-status').classList.add('playing');
+      } else {
+        document.getElementById('recording-status').classList.remove('playing');
+      }
+    }
+
+    function updatePlaybackUI() {
+      const cassette = player.getCurrentCassette();
+      const hasСassette = cassette !== null;
+      const isPlaying = player.isPlaying();
+
+      document.getElementById('btn-load').disabled = isRecording;
+      document.getElementById('btn-play').disabled = !hasСassette || isPlaying;
+      document.getElementById('btn-pause').disabled = !hasСassette || !isPlaying;
+      document.getElementById('btn-stop').disabled = !hasСassette;
+
+      if (hasСassette) {
+        const totalFrames = cassette.frames.length;
+        document.getElementById('playback-status').innerHTML = `
+          Status: <strong>${isPlaying ? 'Playing' : 'Paused'}</strong><br>
+          Current Frame: <span id="current-frame">${currentFrameIndex}</span> / <span id="total-frames">${totalFrames}</span><br>
+          Speed: <span id="playback-speed">1x</span>
+        `;
+        
+        // Update progress bar
+        const progress = (currentFrameIndex / totalFrames) * 100;
+        document.getElementById('progress-bar').style.width = `${progress}%`;
+      } else {
+        document.getElementById('playback-status').innerHTML = `
+          Status: <strong>No Cassette Loaded</strong><br>
+          Current Frame: <span id="current-frame">-</span> / <span id="total-frames">-</span><br>
+          Speed: <span id="playback-speed">1x</span>
+        `;
+      }
+    }
+
+    function displayFrames() {
+      const container = document.getElementById('recorded-frames');
+      if (recordedFrames.length === 0) {
+        container.innerHTML = '<p><em>No frames recorded yet</em></p>';
+        return;
+      }
+
+      let html = '<h3>Recorded Frames:</h3>';
+      recordedFrames.forEach((frame, i) => {
+        html += `<div class="frame">
+          <strong>Frame ${i + 1}</strong> (${frame.timestamp}ms)<br>
+          Type: ${frame.type}<br>
+          Data: ${JSON.stringify(frame.data)}
+        </div>`;
+      });
+      container.innerHTML = html;
+    }
+
+    window.startRecording = function() {
+      isRecording = true;
+      recordedFrames = [];
+      recordingStartTime = Date.now();
+      updateRecordingUI();
+      displayFrames();
+      console.log('Started recording');
+    };
+
+    window.stopRecording = function() {
+      isRecording = false;
+      updateRecordingUI();
+      console.log('Stopped recording. Frames:', recordedFrames.length);
+    };
+
+    window.selectEntity = function(entityId) {
+      if (!isRecording) {
+        alert('Start recording first!');
+        return;
+      }
+
+      const timestamp = Date.now() - recordingStartTime;
+      recordedFrames.push({
+        type: 'entity.select',
+        timestamp,
+        data: { entityId }
+      });
+
+      updateRecordingUI();
+      displayFrames();
+      console.log(`Recorded: select ${entityId}`);
+    };
+
+    window.highlightEntity = function(entityId) {
+      if (!isRecording) {
+        alert('Start recording first!');
+        return;
+      }
+
+      const timestamp = Date.now() - recordingStartTime;
+      recordedFrames.push({
+        type: 'entity.highlight',
+        timestamp,
+        data: { entityId }
+      });
+
+      updateRecordingUI();
+      displayFrames();
+      console.log(`Recorded: highlight ${entityId}`);
+    };
+
+    window.loadCassette = function() {
+      if (recordedFrames.length === 0) {
+        alert('Record some interactions first!');
+        return;
+      }
+
+      const cassette = {
+        id: 'cassette-' + Date.now(),
+        title: 'Test Cassette',
+        description: 'A test walkthrough',
+        frames: recordedFrames
+      };
+
+      player.load(cassette);
+      currentFrameIndex = 0;
+      updatePlaybackUI();
+      document.getElementById('cassette-json').textContent = JSON.stringify(cassette, null, 2);
+      console.log('Loaded cassette:', cassette);
+    };
+
+    window.playCassette = function() {
+      player.play();
+      updatePlaybackUI();
+      console.log('Playing cassette');
+    };
+
+    window.pauseCassette = function() {
+      player.pause();
+      updatePlaybackUI();
+      console.log('Paused cassette');
+    };
+
+    window.stopCassette = function() {
+      player.stop();
+      currentFrameIndex = 0;
+      updatePlaybackUI();
+      document.getElementById('current-frame-display').innerHTML = '';
+      console.log('Stopped cassette');
+    };
+
+    window.exportCassette = function() {
+      const cassette = player.getCurrentCassette();
+      if (!cassette) {
+        alert('No cassette loaded!');
+        return;
+      }
+
+      const json = JSON.stringify(cassette, null, 2);
+      const blob = new Blob([json], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${cassette.id}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      console.log('Exported cassette');
+    };
+
+    // Listen to cassette events
+    eventBus.on('cassette.frame.enter', (event) => {
+      currentFrameIndex = event.data.frameIndex;
+      const frame = event.data.frame;
+      
+      document.getElementById('current-frame-display').innerHTML = `
+        <div class="frame playing">
+          <strong>Frame ${currentFrameIndex + 1}</strong><br>
+          Type: ${frame.type}<br>
+          Data: ${JSON.stringify(frame.data)}<br>
+          <em>Playing now...</em>
+        </div>
+      `;
+      
+      updatePlaybackUI();
+      console.log('Frame entered:', frame);
+    });
+
+    eventBus.on('cassette.player.play', () => {
+      updatePlaybackUI();
+    });
+
+    eventBus.on('cassette.player.pause', () => {
+      updatePlaybackUI();
+    });
+
+    eventBus.on('cassette.player.stop', () => {
+      updatePlaybackUI();
+      document.getElementById('current-frame-display').innerHTML = '<em>Playback stopped</em>';
+    });
+
+    eventBus.on('cassette.player.complete', () => {
+      updatePlaybackUI();
+      document.getElementById('current-frame-display').innerHTML = '<em>Playback complete!</em>';
+      console.log('Cassette playback complete');
+    });
+
+    // Initialize UI
+    updateRecordingUI();
+    updatePlaybackUI();
+
+    console.log('Cassette player example ready!');
+  </script>
+</body>
+</html>

@@ -37,12 +37,11 @@ export class D3Renderer extends BaseRenderer {
     if (!container) return;
 
     container.innerHTML = '';
-    container.className = 'gs-d3-renderer';
+    container.className = 'gs-d3-renderer renderer-content active';
     container.style.cssText = `
       background: ${this.theme === 'dark' ? '#1a1a1a' : '#fafafa'};
       width: 100%;
       height: 100%;
-      overflow: hidden;
       position: relative;
     `;
 
@@ -60,7 +59,7 @@ export class D3Renderer extends BaseRenderer {
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     svg.setAttribute('width', '100%');
     svg.setAttribute('height', '100%');
-    svg.style.cssText = 'display: block;';
+    svg.style.cssText = 'display: block; width: 100%; height: 100%;';
 
     // Create container group for zoom/pan
     const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
@@ -192,8 +191,8 @@ export class D3Renderer extends BaseRenderer {
   }
 
   _renderGraph() {
-    const linksGroup = this.svg.querySelector('.links');
-    const nodesGroup = this.svg.querySelector('.nodes');
+    const linksGroup = this.svg?.querySelector('.links');
+    const nodesGroup = this.svg?.querySelector('.nodes');
 
     if (!linksGroup || !nodesGroup) return;
 
@@ -212,6 +211,11 @@ export class D3Renderer extends BaseRenderer {
       const nodeGroup = this._createNodeElement(node);
       nodesGroup.appendChild(nodeGroup);
     });
+  }
+  
+  _renderD3Graph() {
+    // Alias for _renderGraph for compatibility
+    this._renderGraph();
   }
 
   _createLinkElement(link) {
@@ -658,7 +662,9 @@ export class D3Renderer extends BaseRenderer {
    * @param {Object} node
    */
   _onNodeHover(node) {
+    this.hoveredNodeId = node.id;
     this.highlight('entity', node.id, 'hover');
+    this._updateNodeVisuals();
   }
 
   /**
@@ -667,8 +673,13 @@ export class D3Renderer extends BaseRenderer {
    * @param {Object} node
    */
   _onNodeHoverEnd(node) {
+    if (this.hoveredNodeId === node.id) {
+      this.hoveredNodeId = null;
+      this._updateNodeVisuals();
+    }
     if (this.highlightedElements.get(node.id) === 'hover') {
-      this.clearHighlight(node.id);
+      this.clearHighlight('entity', node.id);
+      this._updateNodeVisuals();
     }
   }
 }

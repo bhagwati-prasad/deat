@@ -403,6 +403,24 @@ export class CassettePlayer {
     this.#cassettes.delete(cassetteId);
   }
 
+  /**
+   * Get internal cassettes map (public access for UI)
+   * @returns {Map}
+   */
+  get cassettes() {
+    return this.#cassettes;
+  }
+
+  /**
+   * Set cassettes map (for UI updates)
+   * @param {Map} value
+   */
+  set cassettes(value) {
+    if (value instanceof Map) {
+      Object.assign(this.#cassettes, Object.fromEntries(value));
+    }
+  }
+
   // ============================================================================
   // PRIVATE
   // ============================================================================

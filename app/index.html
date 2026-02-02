@@ -260,6 +260,7 @@
       display: flex;
       flex-direction: column;
       background: var(--bg-primary);
+      min-height: 0;
     }
 
     .renderer-tabs {
@@ -296,10 +297,12 @@
       flex: 1;
       overflow: auto;
       display: none;
+      min-height: 0;
     }
 
     .renderer-content.active {
       display: flex;
+      min-height: 0;
     }
 
     /* Renderers */
@@ -317,6 +320,13 @@
       background: var(--bg-primary);
       width: 100%;
       height: 100%;
+    }
+    #console-renderer {
+      background: var(--bg-primary);
+      width: 100%;
+      height: 100%;
+      flex-direction: column;
+      overflow: hidden;
     }
     
     /* Ensure renderer children use flex layout */
@@ -360,6 +370,14 @@
       margin-bottom: var(--spacing-md);
     }
 
+    .operation-btns {
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .operation-btns button {
+      width: auto;
+    }
     /* ============= Components ============= */
     .button {
       padding: var(--spacing-sm) var(--spacing-md);
@@ -526,7 +544,107 @@
     .json-number { color: var(--color-warning); }
     .json-boolean { color: var(--color-primary); }
 
+    /* ============= Console Styles ============= */
+    .console-container {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      width: 100%;
+      gap: var(--spacing-md);
+      flex: 1;
+      min-height: 0;
+    }
+
+    .console-output {
+      flex: 1 1 0;
+      height: 0;
+      background: var(--bg-primary);
+      padding: var(--spacing-md);
+      overflow-y: auto;
+      font-family: var(--font-mono);
+      font-size: var(--font-size-sm);
+      color: var(--text-secondary);
+      min-height: 0;
+    }
+
+    .console-line {
+      margin-bottom: var(--spacing-xs);
+      word-break: break-all;
+      white-space: pre-wrap;
+      font-size: 11px;
+      line-height: 1.4;
+    }
+
+    .console-line.log {
+      color: var(--text-secondary);
+    }
+
+    .console-line.error {
+      color: var(--color-error);
+    }
+
+    .console-line.success {
+      color: var(--color-success);
+    }
+
+    .console-line.info {
+      color: var(--color-info);
+    }
+
+    .console-line.warn {
+      color: var(--color-warning);
+    }
+
+    .console-line.input {
+      color: var(--color-accent);
+      font-weight: 600;
+    }
+
+    .console-input-area {
+      display: flex;
+      gap: var(--spacing-sm);
+      align-items: stretch;
+      flex: 0 0 auto;
+    }
+
+    .console-input-area input {
+      flex: 1;
+      padding: var(--spacing-sm);
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      border: 1px solid var(--border-color);
+      border-radius: var(--border-radius);
+      font-size: var(--font-size-sm);
+      font-family: var(--font-mono);
+    }
+
+    .console-input-area input:focus {
+      outline: none;
+      border-color: var(--color-accent);
+      box-shadow: 0 0 0 2px rgba(0, 152, 255, 0.1);
+    }
+
+    .console-input-area button {
+      padding: var(--spacing-sm) var(--spacing-lg);
+      background: var(--color-accent);
+      color: white;
+      border: none;
+      border-radius: var(--border-radius);
+      cursor: pointer;
+      font-weight: 600;
+      transition: background 0.2s;
+    }
+
+    .console-input-area button:hover {
+      background: #0084cc;
+    }
+
+    .console-input-area button:active {
+      opacity: 0.9;
+    }
+
     /* Cassette Controls */
+    /* ============= Cassette Styles ============= */
     .cassette-timeline {
       height: 20px;
       background: var(--bg-primary);
@@ -557,6 +675,213 @@
     .cassette-frame.active {
       background: rgba(0, 152, 255, 0.1);
       border-color: var(--color-accent);
+    }
+
+    /* ============= Redesigned Cassette Sidebar ============= */
+    .cassette-section {
+      padding: var(--spacing-md);
+      display: flex;
+      flex-direction: column;
+      gap: var(--spacing-md);
+    }
+
+    .cassette-controls {
+      display: flex;
+      gap: var(--spacing-sm);
+      flex-wrap: wrap;
+    }
+
+    .cassette-btn {
+      flex: 1;
+      min-width: 45px;
+      padding: var(--spacing-sm);
+      border: none;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      border: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+    }
+
+    .cassette-btn:hover:not(:disabled) {
+      background: var(--color-accent);
+      color: white;
+      border-color: var(--color-accent);
+      transform: translateY(-1px);
+    }
+
+    .cassette-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    /* Scrubber slider */
+    .cassette-scrubber {
+      width: 100%;
+      height: 28px;
+      background: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      cursor: pointer;
+      position: relative;
+      display: flex;
+      align-items: center;
+      overflow: hidden;
+      transition: box-shadow 0.2s ease;
+    }
+
+    .cassette-scrubber:hover {
+      box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .cassette-scrubber.dark-mode {
+      box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
+    }
+
+    .cassette-scrubber-track {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, var(--color-accent) 0%, var(--color-accent) var(--progress, 0%), transparent var(--progress, 0%), transparent 100%);
+      border-radius: 8px;
+      pointer-events: none;
+    }
+
+    .cassette-scrubber-content {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 var(--spacing-sm);
+      z-index: 2;
+      font-size: 10px;
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+
+    /* Entity icons with neumorphism */
+    .cassette-entity-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      position: relative;
+      user-select: none;
+      margin: var(--spacing-xs);
+      
+      /* Neumorphism base */
+      background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-tertiary) 100%);
+      box-shadow: 
+        inset -2px -2px 4px rgba(0, 0, 0, 0.1),
+        inset 2px 2px 4px rgba(255, 255, 255, 0.7),
+        0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .cassette-entity-icon:hover {
+      transform: translateY(-2px);
+      box-shadow: 
+        inset -2px -2px 4px rgba(0, 0, 0, 0.1),
+        inset 2px 2px 4px rgba(255, 255, 255, 0.8),
+        0 6px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    .cassette-entity-icon.active {
+      background: linear-gradient(135deg, var(--color-accent) 0%, #006bb8 100%);
+      color: white;
+      box-shadow: 
+        inset -2px -2px 4px rgba(0, 0, 0, 0.2),
+        inset 2px 2px 4px rgba(255, 255, 255, 0.3),
+        0 4px 12px rgba(0, 152, 255, 0.4);
+    }
+
+    .cassette-entity-icon:active:not(:disabled) {
+      transform: translateY(0);
+      box-shadow: 
+        inset -2px -2px 4px rgba(0, 0, 0, 0.2),
+        inset 2px 2px 4px rgba(255, 255, 255, 0.5),
+        0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .dark-mode .cassette-entity-icon {
+      background: linear-gradient(135deg, #2d2d30 0%, #252526 100%);
+      box-shadow: 
+        inset -2px -2px 4px rgba(0, 0, 0, 0.3),
+        inset 2px 2px 4px rgba(255, 255, 255, 0.1),
+        0 4px 8px rgba(0, 0, 0, 0.3);
+    }
+
+    .dark-mode .cassette-entity-icon:hover {
+      box-shadow: 
+        inset -2px -2px 4px rgba(0, 0, 0, 0.3),
+        inset 2px 2px 4px rgba(255, 255, 255, 0.15),
+        0 6px 12px rgba(0, 0, 0, 0.4);
+    }
+
+    /* Cassette list */
+    .cassette-list {
+      display: flex;
+      flex-direction: column;
+      gap: var(--spacing-sm);
+      max-height: 150px;
+      overflow-y: auto;
+    }
+
+    .cassette-item {
+      padding: var(--spacing-sm);
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      background: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .cassette-item:hover {
+      background: var(--hover-bg);
+      border-color: var(--color-accent);
+      transform: translateX(2px);
+    }
+
+    .cassette-item.active {
+      background: rgba(0, 152, 255, 0.1);
+      border-color: var(--color-accent);
+      box-shadow: 0 0 0 1px var(--color-accent);
+    }
+
+    .cassette-item-title {
+      font-size: var(--font-size-sm);
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .cassette-item-meta {
+      font-size: 10px;
+      color: var(--text-secondary);
+    }
+
+    .cassette-playback-info {
+      display: flex;
+      justify-content: space-between;
+      font-size: 10px;
+      color: var(--text-secondary);
+      padding: 0 var(--spacing-sm);
     }
 
     /* Scrollbar */
@@ -647,10 +972,41 @@
 
       <div class="sidebar-section">
         <div class="sidebar-section-title">🎬 Cassette</div>
-        <button class="button" id="record-btn" style="font-size: var(--font-size-sm);">⏺️ <span class="sidebar-item-text">Start Recording</span></button>
-        <button class="button" id="save-cassette-btn" disabled style="font-size: var(--font-size-sm);">💾 <span class="sidebar-item-text">Save Cassette</span></button>
-        <button class="button" id="load-cassette-btn" style="font-size: var(--font-size-sm);">📂 <span class="sidebar-item-text">Load Cassette</span></button>
-        <button class="button" id="play-btn" disabled style="font-size: var(--font-size-sm);">▶️ <span class="sidebar-item-text">Play</span></button>
+        
+        <div class="cassette-section">
+          <!-- Playback Controls -->
+          <div class="cassette-controls">
+            <button class="cassette-btn" id="record-btn" title="Start Recording">⏺️</button>
+            <button class="cassette-btn" id="play-btn" disabled title="Play Cassette">▶️</button>
+            <button class="cassette-btn" id="pause-btn" disabled title="Pause">⏸️</button>
+            <button class="cassette-btn" id="stop-btn" disabled title="Stop">⏹️</button>
+          </div>
+
+          <!-- Frame Scrubber -->
+          <div class="cassette-playback-info">
+            <span>Frame:</span>
+            <span><span id="current-frame-cassette">0</span>/<span id="total-frames-cassette">0</span></span>
+          </div>
+          <div class="cassette-scrubber" id="cassette-scrubber">
+            <div class="cassette-scrubber-track" id="cassette-scrubber-track"></div>
+            <div class="cassette-scrubber-content">
+              <span id="scrubber-time">0:00</span>
+            </div>
+          </div>
+
+          <!-- Current Frame Entity Icons -->
+          <div style="display: flex; align-items: center; gap: var(--spacing-xs); margin-top: var(--spacing-sm);">
+            <span style="font-size: 10px; color: var(--text-secondary); font-weight: 500;">Current:</span>
+            <div id="current-frame-entities" style="display: flex; gap: var(--spacing-xs);"></div>
+          </div>
+
+          <!-- Cassettes List -->
+          <div style="border-top: 1px solid var(--border-color); padding-top: var(--spacing-md); margin-top: var(--spacing-md);">
+            <div style="font-size: 11px; font-weight: 600; color: var(--text-secondary); margin-bottom: var(--spacing-sm);">Cassettes</div>
+            <div class="cassette-list" id="cassette-list"></div>
+            <button class="cassette-btn" id="save-cassette-btn" disabled style="width: 100%; margin-top: var(--spacing-sm);">💾 Save Current</button>
+          </div>
+        </div>
       </div>
 
       <div class="sidebar-section">
@@ -679,6 +1035,7 @@
           <div class="renderer-tab active" data-renderer="d3">Graph View</div>
           <div class="renderer-tab" data-renderer="tree">Tree View</div>
           <div class="renderer-tab" data-renderer="json">JSON View</div>
+          <div class="renderer-tab" data-renderer="console">Console</div>
         </div>
 
         <!-- D3 Renderer -->
@@ -689,6 +1046,22 @@
 
         <!-- JSON Renderer -->
         <div id="json-renderer" class="renderer-content"></div>
+
+        <!-- Console -->
+        <div id="console-renderer" class="renderer-content">
+          <div class="console-container">
+            <div class="console-output" id="console-output"></div>
+            <div class="console-input-area">
+              <input 
+                type="text" 
+                id="console-input" 
+                placeholder="Type JavaScript code (has access to GS)..." 
+                onkeypress="if(event.key === 'Enter') window.executeConsoleCommand()" 
+              />
+              <button onclick="window.executeConsoleCommand()">Execute</button>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- Control Panel -->
@@ -696,10 +1069,12 @@
         <!-- Operations Section -->
         <div class="panel-section">
           <div class="panel-title">Operations</div>
-          <button class="button" id="add-entity-btn" style="font-size: var(--font-size-sm);">➕ Add Entity</button>
-          <button class="button" id="add-relation-btn" disabled style="font-size: var(--font-size-sm);">🔗 Add Relation</button>
-          <button class="button" id="undo-btn" disabled style="font-size: var(--font-size-sm);">↶ Undo</button>
-          <button class="button" id="redo-btn" disabled style="font-size: var(--font-size-sm);">↷ Redo</button>
+          <div class="operation-btns">
+            <button class="button" id="add-entity-btn" style="font-size: var(--font-size-sm);">➕</button>
+            <button class="button" id="add-relation-btn" disabled style="font-size: var(--font-size-sm);">🔗</button>
+            <button class="button" id="undo-btn" disabled style="font-size: var(--font-size-sm);">↶</button>
+            <button class="button" id="redo-btn" disabled style="font-size: var(--font-size-sm);">↷</button>
+          </div>
         </div>
 
         <!-- GitHub Import Section -->
@@ -1009,6 +1384,80 @@
       activeAnnotationService.addNote('project_graphsense', 'Core entity graph system');
       activeAnnotationService.addTag('project_graphsense', 'critical');
       activeAnnotationService.addTag('project_graphsense', 'active');
+
+      // Create sample cassette for guided walkthrough
+      createSampleCassette();
+    }
+
+    // ============= Sample Cassette Creation =============
+    function createSampleCassette() {
+      const cassettePlayer = graphManager.getActiveGraph().cassettePlayer;
+      
+      const sampleCassette = {
+        id: 'cassette-sample-walkthrough',
+        name: 'Team Structure Overview',
+        description: 'Guided walkthrough of the team and project structure',
+        frames: [
+          {
+            targetId: 'person_alice',
+            action: 'highlight',
+            duration: 1500,
+            metadata: { label: 'Alice - Lead Developer' }
+          },
+          {
+            targetId: 'rel_alice_gs',
+            action: 'focus',
+            duration: 1200,
+            metadata: { label: 'Works on GraphSense' }
+          },
+          {
+            targetId: 'project_graphsense',
+            action: 'highlight',
+            duration: 1500,
+            metadata: { label: 'GraphSense Project' }
+          },
+          {
+            targetId: 'person_bob',
+            action: 'highlight',
+            duration: 1200,
+            metadata: { label: 'Bob - Designer' }
+          },
+          {
+            targetId: 'rel_bob_gs',
+            action: 'focus',
+            duration: 1200,
+            metadata: { label: 'Bob also works on GraphSense' }
+          },
+          {
+            targetId: 'rel_alice_dv',
+            action: 'highlight',
+            duration: 1500,
+            metadata: { label: 'Alice leads DataViz' }
+          },
+          {
+            targetId: 'project_dataviz',
+            action: 'highlight',
+            duration: 1500,
+            metadata: { label: 'DataViz Platform' }
+          },
+          {
+            targetId: 'team_platform',
+            action: 'focus',
+            duration: 1500,
+            metadata: { label: 'Platform Team' }
+          }
+        ],
+        created: new Date().toISOString(),
+        modified: new Date().toISOString(),
+        version: '1.0.0'
+      };
+      
+      // Add to cassette player
+      cassettePlayer.cassettes = cassettePlayer.cassettes || new Map();
+      cassettePlayer.cassettes.set(sampleCassette.id, sampleCassette);
+      
+      // Update cassette list UI
+      updateCassetteList();
     }
 
     createSampleData();
@@ -1118,6 +1567,102 @@
       document.getElementById('relation-count').textContent = activeGraph.relations.size;
     }
 
+    // ============= Console Functions =============
+    const consoleOutput = document.getElementById('console-output');
+    const originalLog = console.log;
+    const originalError = console.error;
+    const originalWarn = console.warn;
+    const originalInfo = console.info;
+
+    // Intercept console methods
+    console.log = function(...args) {
+      originalLog.apply(console, args);
+      addConsoleOutput(args.map(a => typeof a === 'object' ? JSON.stringify(a, null, 2) : String(a)).join(' '), 'log');
+    };
+
+    console.error = function(...args) {
+      originalError.apply(console, args);
+      addConsoleOutput(args.map(a => typeof a === 'object' ? JSON.stringify(a, null, 2) : String(a)).join(' '), 'error');
+    };
+
+    console.warn = function(...args) {
+      originalWarn.apply(console, args);
+      addConsoleOutput(args.map(a => typeof a === 'object' ? JSON.stringify(a, null, 2) : String(a)).join(' '), 'warn');
+    };
+
+    console.info = function(...args) {
+      originalInfo.apply(console, args);
+      addConsoleOutput(args.map(a => typeof a === 'object' ? JSON.stringify(a, null, 2) : String(a)).join(' '), 'info');
+    };
+
+    function addConsoleOutput(text, type = 'log') {
+      const line = document.createElement('div');
+      line.className = `console-line ${type}`;
+      line.textContent = text;
+      consoleOutput.appendChild(line);
+      consoleOutput.scrollTop = consoleOutput.scrollHeight;
+    }
+
+    function isDottedPath(command) {
+      return /^\s*[A-Za-z_$][\w$]*(\.[A-Za-z_$][\w$]*)+\s*$/.test(command);
+    }
+
+    function resolvePath(command) {
+      const parts = command.trim().split('.');
+      let current = window;
+      for (const part of parts) {
+        if (current == null || !(part in current)) {
+          return { exists: false, missing: part };
+        }
+        current = current[part];
+      }
+      return { exists: true, value: current };
+    }
+
+    window.executeConsoleCommand = function() {
+      const input = document.getElementById('console-input');
+      const command = input.value.trim();
+      
+      if (!command) return;
+
+      if (command === '/clear') {
+        consoleOutput.innerHTML = '';
+        input.value = '';
+        input.focus();
+        return;
+      }
+      
+      // Show the command being executed
+      addConsoleOutput(`> ${command}`, 'input');
+      
+      try {
+        // Execute command with access to GS and console logging
+        const result = eval(command);
+
+        if (result === undefined && isDottedPath(command)) {
+          const resolved = resolvePath(command);
+          if (!resolved.exists) {
+            throw new Error(`Unknown reference: ${command}`);
+          }
+        }
+        
+        // Show result
+        if (result !== undefined) {
+          if (typeof result === 'object') {
+            addConsoleOutput(JSON.stringify(result, null, 2), 'success');
+          } else {
+            addConsoleOutput(String(result), 'success');
+          }
+        }
+      } catch (error) {
+        addConsoleOutput(`Error: ${error.message}`, 'error');
+      }
+      
+      // Clear input
+      input.value = '';
+      input.focus();
+    };
+
     // Theme selector
     document.getElementById('theme-selector').addEventListener('change', (e) => {
       const theme = e.target.value;
@@ -1141,7 +1686,9 @@
         // Show active renderer
         document.querySelectorAll('.renderer-content').forEach(e => e.classList.remove('active'));
         document.getElementById(`${renderer}-renderer`).classList.add('active');
-        renderAll();
+        if (renderer !== 'console') {
+          renderAll();
+        }
       });
     });
 
@@ -1301,43 +1848,210 @@
       renderAll();
     });
 
-    // Cassette recording
+    // Cassette recording event handlers
     document.getElementById('record-btn').addEventListener('click', function() {
+      const cassettePlayer = graphManager.getActiveGraph().cassettePlayer;
       if (!isRecording) {
         isRecording = true;
         recordedFrames = [];
         recordingStartTime = Date.now();
-        this.textContent = '⏸️ Stop Recording';
+        this.style.background = 'var(--color-error)';
+        this.style.color = 'white';
+        this.style.borderColor = 'var(--color-error)';
         document.getElementById('save-cassette-btn').disabled = false;
       } else {
         isRecording = false;
-        this.textContent = '⏺️ Start Recording';
+        this.style.background = 'var(--bg-primary)';
+        this.style.color = 'var(--text-primary)';
+        this.style.borderColor = 'var(--border-color)';
       }
     });
 
     document.getElementById('save-cassette-btn').addEventListener('click', () => {
+      if (recordedFrames.length === 0) {
+        alert('No frames recorded');
+        return;
+      }
       const cassette = {
         id: 'cassette-' + Date.now(),
-        title: 'Recorded Session',
+        name: 'Recording ' + new Date().toLocaleTimeString(),
         description: `${recordedFrames.length} frames recorded`,
-        frames: recordedFrames
+        frames: recordedFrames,
+        created: new Date().toISOString(),
+        modified: new Date().toISOString(),
+        version: '1.0.0'
       };
-      console.log('Cassette saved:', cassette);
-      alert(`Cassette saved with ${recordedFrames.length} frames!`);
-      graphManager.getActiveGraph().cassettePlayer.load(cassette);
-      document.getElementById('play-btn').disabled = false;
+      const cassettePlayer = graphManager.getActiveGraph().cassettePlayer;
+      if (!cassettePlayer.cassettes) cassettePlayer.cassettes = new Map();
+      cassettePlayer.cassettes.set(cassette.id, cassette);
+      
+      recordedFrames = [];
+      document.getElementById('record-btn').style.background = 'var(--bg-primary)';
+      document.getElementById('record-btn').style.color = 'var(--text-primary)';
+      document.getElementById('record-btn').style.borderColor = 'var(--border-color)';
+      isRecording = false;
+      
+      updateCassetteList();
+      alert(`Cassette saved with ${cassette.frames.length} frames!`);
     });
 
+    // Play/Pause/Stop buttons
     document.getElementById('play-btn').addEventListener('click', () => {
       const cassettePlayer = graphManager.getActiveGraph().cassettePlayer;
-      if (cassettePlayer.isPlaying()) {
-        cassettePlayer.stop();
-        document.getElementById('play-btn').textContent = '▶️ Play';
-      } else {
-        cassettePlayer.play();
-        document.getElementById('play-btn').textContent = '⏹️ Stop';
+      const selectedCassette = document.querySelector('.cassette-item.active');
+      if (!selectedCassette) {
+        alert('Please select a cassette first');
+        return;
       }
+      const cassetteId = selectedCassette.dataset.id;
+      cassettePlayer.play(cassetteId);
+      updateCassettePlayback();
     });
+
+    document.getElementById('pause-btn').addEventListener('click', () => {
+      const cassettePlayer = graphManager.getActiveGraph().cassettePlayer;
+      cassettePlayer.pause();
+      updateCassettePlayback();
+    });
+
+    document.getElementById('stop-btn').addEventListener('click', () => {
+      const cassettePlayer = graphManager.getActiveGraph().cassettePlayer;
+      cassettePlayer.stop();
+      updateCassettePlayback();
+    });
+
+    // Scrubber functionality
+    document.getElementById('cassette-scrubber').addEventListener('click', (e) => {
+      const cassettePlayer = graphManager.getActiveGraph().cassettePlayer;
+      const cassette = cassettePlayer.getCurrentCassette();
+      if (!cassette || !cassettePlayer.isPlaying()) return;
+      
+      const rect = e.currentTarget.getBoundingClientRect();
+      const percent = (e.clientX - rect.left) / rect.width;
+      const frameIndex = Math.floor(percent * cassette.frames.length) - 1;
+      cassettePlayer.seek(Math.max(0, Math.min(frameIndex, cassette.frames.length - 1)));
+      updateCassettePlayback();
+    });
+
+    // ============= Cassette UI Functions =============
+    function updateCassetteList() {
+      const cassettePlayer = graphManager.getActiveGraph().cassettePlayer;
+      const cassettes = cassettePlayer.cassettes || new Map();
+      const listEl = document.getElementById('cassette-list');
+      
+      listEl.innerHTML = '';
+      
+      if (cassettes.size === 0) {
+        listEl.innerHTML = '<div style="padding: var(--spacing-md); color: var(--text-secondary); font-size: 11px;"><em>No cassettes</em></div>';
+        return;
+      }
+      
+      cassettes.forEach((cassette, id) => {
+        const item = document.createElement('div');
+        item.className = 'cassette-item';
+        item.dataset.id = id;
+        item.innerHTML = `
+          <div class="cassette-item-title">${cassette.name}</div>
+          <div class="cassette-item-meta">${cassette.frames?.length || 0} frames</div>
+        `;
+        
+        item.addEventListener('click', () => {
+          document.querySelectorAll('.cassette-item').forEach(el => el.classList.remove('active'));
+          item.classList.add('active');
+          document.getElementById('play-btn').disabled = false;
+          
+          // Set the selected cassette as current in the cassette player
+          const cassetteId = item.dataset.id;
+          const cassette = cassettePlayer.cassettes.get(cassetteId);
+        
+          // Store current cassette ID in the player (use play with no autostart)
+          cassettePlayer.play(cassetteId);
+          cassettePlayer.stop(); // Stop after setting so it doesn't auto-play
+        
+          //document.getElementById('play-btn').disabled = false;
+          updateCassettePlayback();
+        });
+        
+        listEl.appendChild(item);
+      });
+    }
+
+    function updateCassettePlayback() {
+      const cassettePlayer = graphManager.getActiveGraph().cassettePlayer;
+      const cassette = cassettePlayer.getCurrentCassette();
+      
+      if (!cassette) {
+        document.getElementById('current-frame-cassette').textContent = '0';
+        document.getElementById('total-frames-cassette').textContent = '0';
+        document.getElementById('cassette-scrubber-track').style.setProperty('--progress', '0%');
+        document.getElementById('current-frame-entities').innerHTML = '';
+        document.getElementById('play-btn').disabled = true;
+        document.getElementById('pause-btn').disabled = true;
+        document.getElementById('stop-btn').disabled = true;
+        return;
+      }
+      
+      const frameIndex = cassettePlayer.getCurrentFrameIndex();
+      const totalFrames = cassette.frames.length;
+      const isPlaying = cassettePlayer.isPlaying();
+      
+      // Update frame display
+      document.getElementById('current-frame-cassette').textContent = frameIndex + 1;
+      document.getElementById('total-frames-cassette').textContent = totalFrames;
+      
+      // Update scrubber
+      const progress = totalFrames > 0 ? ((frameIndex + 1) / totalFrames) * 100 : 0;
+      document.getElementById('cassette-scrubber-track').style.setProperty('--progress', progress + '%');
+      
+      // Update button states
+      document.getElementById('play-btn').disabled = isPlaying;
+      document.getElementById('pause-btn').disabled = !isPlaying;
+      document.getElementById('stop-btn').disabled = !isPlaying;
+      
+      // Update current frame entities
+      if (frameIndex >= 0 && frameIndex < cassette.frames.length) {
+        const frame = cassette.frames[frameIndex];
+        const entityIcon = getEntityIcon(frame.targetId);
+        document.getElementById('current-frame-entities').innerHTML = `
+          <div class="cassette-entity-icon" title="${frame.targetId}">
+            ${entityIcon}
+          </div>
+        `;
+      } else {
+        document.getElementById('current-frame-entities').innerHTML = '';
+      }
+    }
+
+    function getEntityIcon(entityId) {
+      const graph = getActiveGraph();
+      const entity = graph.entities.get(entityId);
+      const relation = graph.relations.get(entityId);
+      
+      if (entity) {
+        const typeIcons = {
+          person: '👤',
+          project: '📦',
+          team: '👥',
+          repository: '📚',
+          organization: '🏢',
+          user: '👤'
+        };
+        return typeIcons[entity.type] || '•';
+      } else if (relation) {
+        return '🔗';
+      }
+      return '•';
+    }
+
+    // Listen to cassette playback events
+    eventBus.subscribe('cassette.frame.enter', (event) => {
+      updateCassettePlayback();
+    });
+
+    eventBus.subscribe('cassette.play.ended', (event) => {
+      updateCassettePlayback();
+    });
+
 
     // Reset
     document.getElementById('reset-btn').addEventListener('click', () => {
@@ -1364,20 +2078,63 @@
       }
     });
 
-    // Cassette playback events
-    eventBus.subscribe('cassette.frame.enter', (event) => {
-      const totalFrames = cassettePlayer.getCurrentCassette()?.frames.length || 0;
-      document.getElementById('current-frame').textContent = event.data.frameIndex + 1;
-      document.getElementById('total-frames').textContent = totalFrames;
-      const progress = ((event.data.frameIndex + 1) / totalFrames) * 100;
-      document.getElementById('cassette-progress').style.width = `${progress}%`;
-    });
+    // Cassette playback events (old reference removed, updated below)
+    // These events are now handled by updateCassettePlayback() function
 
     // Initial render
     renderAll();
+    updateCassetteList();
 
+    // ============= Expose Global API =============
+    window.GS = {
+      // Graph Management
+      graphManager,
+      getActiveGraph,
+      getActiveEventBus,
+      getActiveSchema,
+      getActiveQueryEngine,
+      getActiveUndoRedo,
+      
+      // Active Graph Components
+      get graph() { return getActiveGraph(); },
+      get eventBus() { return getActiveEventBus(); },
+      get schema() { return getActiveSchema(); },
+      get queryEngine() { return getActiveQueryEngine(); },
+      get undoRedo() { return getActiveUndoRedo(); },
+      get cassettePlayer() { return graphManager.getActiveGraph().cassettePlayer; },
+      get annotationService() { return graphManager.getActiveGraph().annotationService; },
+      get uiBridge() { return graphManager.getActiveGraph().uiBridge; },
+      
+      // Renderers
+      renderers,
+      d3Renderer,
+      treeRenderer,
+      jsonRenderer,
+      
+      // UI Functions
+      renderAll,
+      updateStats,
+      updateGraphsList,
+      updateCassetteList,
+      updateCassettePlayback,
+      getEntityIcon,
+      createSampleData,
+      createSampleCassette,
+      
+      // Utilities
+      eventBus: () => getActiveEventBus(),
+      schema: () => getActiveSchema(),
+      
+      // State
+      get currentRenderer() { return currentRenderer; },
+      get isRecording() { return isRecording; },
+      get recordedFrames() { return recordedFrames; },
+      get selectedEntity() { return selectedEntity; }
+    };
 
-    console.log('GraphSense initialized. Access via window.GS');
+    console.log('✓ GraphSense initialized');
+    console.log('✓ Access via window.GS or just GS in console');
+    console.log('✓ Available: GS.graph, GS.eventBus, GS.schema, GS.cassettePlayer, etc.');
   </script>
 </body>
 </html>

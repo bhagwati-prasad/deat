@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>GS API Reference — Public Methods</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #0f1115;
+      --card: #151a22;
+      --text: #e6edf3;
+      --muted: #9fb0c0;
+      --accent: #7aa2f7;
+      --border: #2a3441;
+      --chip: #1f2733;
+    }
+    @media (prefers-color-scheme: light) {
+      :root {
+        --bg: #f6f8fa;
+        --card: #ffffff;
+        --text: #1f2328;
+        --muted: #57606a;
+        --accent: #0969da;
+        --border: #d0d7de;
+        --chip: #eef2f6;
+      }
+    }
+    body {
+      margin: 0;
+      padding: 32px;
+      background: var(--bg);
+      color: var(--text);
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+      line-height: 1.5;
+    }
+    header {
+      max-width: 1100px;
+      margin: 0 auto 28px;
+    }
+    h1 {
+      font-size: 28px;
+      margin: 0 0 8px;
+    }
+    p.lead {
+      margin: 0;
+      color: var(--muted);
+    }
+    section {
+      max-width: 1100px;
+      margin: 24px auto;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px 20px 8px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.12);
+    }
+    h2 {
+      margin: 0 0 12px;
+      font-size: 20px;
+      color: var(--accent);
+    }
+    .namespace {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: var(--chip);
+      border: 1px solid var(--border);
+      font-size: 12px;
+      color: var(--muted);
+      margin-left: 6px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 12px 0 18px;
+      font-size: 13px;
+    }
+    th, td {
+      text-align: left;
+      padding: 10px 8px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+    th {
+      color: var(--muted);
+      font-weight: 600;
+      font-size: 12px;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+    }
+    code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      background: transparent;
+      color: inherit;
+    }
+    .note {
+      color: var(--muted);
+      font-size: 12px;
+      margin: 6px 0 0;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>GS Public API Reference</h1>
+    <p class="lead">Exhaustive list of methods available on the <code>window.GS</code> object. Each entry includes inputs, outputs, side-effects, and usage guidance.</p>
+  </header>
+  <a href="/" style="display: block; max-width: 1100px; margin: 0 auto 16px; text-align: right; color: var(--accent); text-decoration: none;">← Back to Main App</a>
+  <section>
+    <h2>Core Lifecycle <span class="namespace">GS.core</span></h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Method</th>
+          <th>Inputs</th>
+          <th>Output</th>
+          <th>Effect</th>
+          <th>Use when</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>GS.core.init(options?)</code></td>
+          <td>options: { offline?, storageProvider?, dataAdapter? }</td>
+          <td>void</td>
+          <td>Initializes system, sets providers, emits <code>app.init</code></td>
+          <td>Bootstrapping GS for the first time or re-initializing with new options.</td>
+        </tr>
+        <tr>
+          <td><code>GS.core.reset()</code></td>
+          <td>—</td>
+          <td>void</td>
+          <td>Resets all state to defaults, emits <code>state.reset</code></td>
+          <td>Starting over or clearing the system during development/testing.</td>
+        </tr>
+        <tr>
+          <td><code>GS.core.destroy()</code></td>
+          <td>—</td>
+          <td>void</td>
+          <td>Disposes resources, unsubscribes events, emits <code>app.destroy</code></td>
+          <td>Cleaning up before teardown or page unload.</td>
+        </tr>
+        <tr>
+          <td><code>GS.core.status()</code></td>
+          <td>—</td>
+          <td>{ isOnline, activeVersion, activeBranch, storageProvider, dataAdapter }</td>
+          <td>No mutation; reads state</td>
+          <td>Checking current system status and configuration.</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>Graph Manipulation <span class="namespace">GS.graph</span></h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Method</th>
+          <th>Inputs</th>
+          <th>Output</th>
+          <th>Effect</th>
+          <th>Use when</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>GS.graph.create(schemaId?)</code></td>
+          <td>schemaId?: string</td>
+          <td>graphId: string</td>
+          <td>Creates new graph, emits <code>graph.init</code></td>
+          <td>Starting a new graph (optionally bound to a schema).</td>
+        </tr>
+        <tr>
+          <td><code>GS.graph.load(data, format?)</code></td>
+          <td>data: string|object, format?: 'json'|'html'</td>
+          <td>void</td>
+          <td>Loads graph, emits <code>graph.load</code></td>
+          <td>Loading a saved graph representation.</td>
+        </tr>
+        <tr>
+          <td><code>GS.graph.serialize(format?)</code></td>
+          <td>format?: 'json'|'html'</td>
+          <td>string|object</td>
+          <td>Emits <code>graph.serialize</code></td>
+          <td>Exporting or inspecting the current graph.</td>
+        </tr>
+        <tr>
+          <td><code>GS.graph.addEntity(entity)</code></td>
+          <td>entity: { type, metadata?, id? }</td>
+          <td>void</td>
+          <td>Mutates graph, emits <code>graph.entity.add</code></td>
+          <td>Adding a new node to the graph.</td>
+        </tr>
+        <tr>
+          <td><code>GS.graph.updateEntity(entityId, patch)</code></td>
+          <td>entityId: string, patch: object</td>
+          <td>void</td>
+          <td>Mutates graph, emits <code>graph.entity.update</code></td>
+          <td>Updating entity metadata or properties.</td>
+        </tr>
+        <tr>
+          <td><code>GS.graph.removeEntity(entityId)</code></td>
+          <td>entityId: string</td>
+          <td>void</td>
+          <td>Removes entity, emits <code>graph.entity.remove</code></td>
+          <td>Deleting an entity and its relations.</td>
+        </tr>
+        <tr>
+          <td><code>GS.graph.addRelation(relation)</code></td>
+          <td>relation: { type, from, to, metadata?, id? }</td>
+          <td>void</td>
+          <td>Mutates graph, emits <code>graph.relation.add</code></td>
+          <td>Connecting two entities with a relation.</td>
+        </tr>
+        <tr>
+          <td><code>GS.graph.updateRelation(relationId, patch)</code></td>
+          <td>relationId: string, patch: object</td>
+          <td>void</td>
+          <td>Mutates graph, emits <code>graph.relation.update</code></td>
+          <td>Updating relation metadata or properties.</td>
+        </tr>
+        <tr>
+          <td><code>GS.graph.removeRelation(relationId)</code></td>
+          <td>relationId: string</td>
+          <td>void</td>
+          <td>Removes relation, emits <code>graph.relation.remove</code></td>
+          <td>Deleting a relationship edge.</td>
+        </tr>
+        <tr>
+          <td><code>GS.graph.enterSubgraph(entityId)</code></td>
+          <td>entityId: string</td>
+          <td>void</td>
+          <td>Changes active view, emits <code>graph.subgraph.enter</code></td>
+          <td>Drilling into a nested subgraph entity.</td>
+        </tr>
+        <tr>
+          <td><code>GS.graph.exitSubgraph()</code></td>
+          <td>—</td>
+          <td>void</td>
+          <td>Resets active view, emits <code>graph.subgraph.exit</code></td>
+          <td>Returning to the parent graph view.</td>
+        </tr>
+        <tr>
+          <td><code>GS.graph.getEntity(id)</code></td>
+          <td>id: string</td>
+          <td>entity | undefined</td>
+          <td>No mutation; reads state</td>
+          <td>Fetching a single entity by ID.</td>
+        </tr>
+        <tr>
+          <td><code>GS.graph.getRelation(id)</code></td>
+          <td>id: string</td>
+          <td>relation | undefined</td>
+          <td>No mutation; reads state</td>
+          <td>Fetching a single relation by ID.</td>
+        </tr>
+        <tr>
+          <td><code>GS.graph.getActiveGraph()</code></td>
+          <td>—</td>
+          <td>graph snapshot</td>
+          <td>No mutation; reads state</td>
+          <td>Inspecting the full graph in its current state.</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>Schema Management <span class="namespace">GS.schema</span></h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Method</th>
+          <th>Inputs</th>
+          <th>Output</th>
+          <th>Effect</th>
+          <th>Use when</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>GS.schema.load(schemaObject)</code></td>
+          <td>schemaObject: object</td>
+          <td>void</td>
+          <td>Sets active schema</td>
+          <td>Loading a schema definition into the system.</td>
+        </tr>
+        <tr>
+          <td><code>GS.schema.getActive()</code></td>
+          <td>—</td>
+          <td>schema object</td>
+          <td>No mutation; reads state</td>
+          <td>Inspecting the currently active schema.</td>
+        </tr>
+        <tr>
+          <td><code>GS.schema.addEntityType(name, definition)</code></td>
+          <td>name: string, definition: object</td>
+          <td>void</td>
+          <td>Updates schema with entity type</td>
+          <td>Extending schema with new entity types.</td>
+        </tr>
+        <tr>
+          <td><code>GS.schema.addRelationType(name, definition)</code></td>
+          <td>name: string, definition: object</td>
+          <td>void</td>
+          <td>Updates schema with relation type</td>
+          <td>Extending schema with new relation types.</td>
+        </tr>
+        <tr>
+          <td><code>GS.schema.validateGraph()</code></td>
+          <td>—</td>
+          <td>validation result</td>
+          <td>Validates entire graph against schema</td>
+          <td>Ensuring graph integrity after large changes.</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>Querying <span class="namespace">GS.query</span></h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Method</th>
+          <th>Inputs</th>
+          <th>Output</th>
+          <th>Effect</th>
+          <th>Use when</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>GS.query.from(entityType?)</code></td>
+          <td>entityType?: string</td>
+          <td>QueryBuilder</td>
+          <td>No mutation</td>
+          <td>Starting a query scoped to an entity type.</td>
+        </tr>
+        <tr>
+          <td><code>GS.query.where(predicate)</code></td>
+          <td>predicate: object</td>
+          <td>QueryBuilder</td>
+          <td>No mutation</td>
+          <td>Starting a query with a filter.</td>
+        </tr>
+        <tr>
+          <td><code>GS.query.diff(oldVersionId, newVersionId)</code></td>
+          <td>oldVersionId: string, newVersionId: string</td>
+          <td>QueryBuilder</td>
+          <td>No mutation</td>
+          <td>Querying differences between versions.</td>
+        </tr>
+        <tr>
+          <td><code>GS.query.shortestPath(fromId, toId)</code></td>
+          <td>fromId: string, toId: string</td>
+          <td>QueryBuilder</td>
+          <td>No mutation</td>
+          <td>Finding the shortest path between two entities.</td>
+        </tr>
+        <tr>
+          <td><code>GS.query.eq(field, value)</code></td>
+          <td>field: string, value: any</td>
+          <td>predicate object</td>
+          <td>No mutation</td>
+          <td>Building equality predicate in query expressions.</td>
+        </tr>
+        <tr>
+          <td><code>GS.query.neq(field, value)</code></td>
+          <td>field: string, value: any</td>
+          <td>predicate object</td>
+          <td>No mutation</td>
+          <td>Building inequality predicate in query expressions.</td>
+        </tr>
+        <tr>
+          <td><code>GS.query.gt(field, value)</code></td>
+          <td>field: string, value: any</td>
+          <td>predicate object</td>
+          <td>No mutation</td>
+          <td>Building greater-than predicate in queries.</td>
+        </tr>
+        <tr>
+          <td><code>GS.query.lt(field, value)</code></td>
+          <td>field: string, value: any</td>
+          <td>predicate object</td>
+          <td>No mutation</td>
+          <td>Building less-than predicate in queries.</td>
+        </tr>
+        <tr>
+          <td><code>GS.query.in(field, array)</code></td>
+          <td>field: string, array: any[]</td>
+          <td>predicate object</td>
+          <td>No mutation</td>
+          <td>Building membership predicate in queries.</td>
+        </tr>
+        <tr>
+          <td><code>GS.query.exists(field)</code></td>
+          <td>field: string</td>
+          <td>predicate object</td>
+          <td>No mutation</td>
+          <td>Checking field existence in queries.</td>
+        </tr>
+        <tr>
+          <td><code>GS.query.contains(field, value)</code></td>
+          <td>field: string, value: any</td>
+          <td>predicate object</td>
+          <td>No mutation</td>
+          <td>Checking substring/array containment in queries.</td>
+        </tr>
+        <tr>
+          <td><code>GS.query.matches(field, regexString)</code></td>
+          <td>field: string, regexString: string</td>
+          <td>predicate object</td>
+          <td>No mutation</td>
+          <td>Applying regex match predicate in queries.</td>
+        </tr>
+        <tr>
+          <td><code>GS.query.expr(type, args)</code></td>
+          <td>type: string, args: any[]</td>
+          <td>expression object</td>
+          <td>No mutation</td>
+          <td>Composing advanced predicate trees.</td>
+        </tr>
+      </tbody>
+    </table>
+    <p class="note">QueryBuilder methods (returned by <code>GS.query.*</code>): <code>where()</code>, <code>and()</code>, <code>or()</code>, <code>traverse()</code>, <code>expand()</code>, <code>select()</code>, <code>execute()</code>. These are chainable and do not mutate graph state; <code>execute()</code> emits <code>query.execute</code> and <code>query.result</code>.</p>
+  </section>
+
+  <section>
+    <h2>Annotations <span class="namespace">GS.annotation</span></h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Method</th>
+          <th>Inputs</th>
+          <th>Output</th>
+          <th>Effect</th>
+          <th>Use when</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td><code>GS.annotation.addNote(targetId, content)</code></td><td>targetId: string, content: string</td><td>noteId: string</td><td>Adds note, emits <code>annotation.add</code></td><td>Attaching a new note to an entity/relation.</td></tr>
+        <tr><td><code>GS.annotation.updateNote(noteId, content)</code></td><td>noteId: string, content: string</td><td>void</td><td>Updates note, emits <code>annotation.update</code></td><td>Editing a note’s content.</td></tr>
+        <tr><td><code>GS.annotation.removeNote(noteId)</code></td><td>noteId: string</td><td>void</td><td>Deletes note, emits <code>annotation.remove</code></td><td>Removing a note.</td></tr>
+        <tr><td><code>GS.annotation.searchNotes(query, options?)</code></td><td>query: string, options?: { limit?, fuzzy? }</td><td>notes: object[]</td><td>No mutation</td><td>Finding notes that match a text query.</td></tr>
+        <tr><td><code>GS.annotation.getNotes(targetId)</code></td><td>targetId: string</td><td>notes: object[]</td><td>No mutation</td><td>Listing notes on a specific target.</td></tr>
+        <tr><td><code>GS.annotation.addTag(label, options?)</code></td><td>label: string, options?: { color?, description? }</td><td>tagId: string</td><td>Adds tag, emits <code>annotation.tag.add</code></td><td>Creating a reusable tag definition.</td></tr>
+        <tr><td><code>GS.annotation.deleteTag(tagId)</code></td><td>tagId: string</td><td>void</td><td>Removes tag, emits <code>annotation.tag.remove</code></td><td>Deleting a tag (detaches from all targets).</td></tr>
+        <tr><td><code>GS.annotation.renameTag(tagId, newLabel)</code></td><td>tagId: string, newLabel: string</td><td>void</td><td>Renames tag, emits <code>annotation.tag.rename</code></td><td>Renaming a tag.</td></tr>
+        <tr><td><code>GS.annotation.listTags()</code></td><td>—</td><td>tags: object[]</td><td>No mutation</td><td>Listing all tag definitions.</td></tr>
+        <tr><td><code>GS.annotation.getTagUsage(tagId)</code></td><td>tagId: string</td><td>count: number</td><td>No mutation</td><td>Checking tag usage.</td></tr>
+        <tr><td><code>GS.annotation.attachTag(tagId, targetId)</code></td><td>tagId: string, targetId: string</td><td>void</td><td>Attaches tag, emits <code>annotation.update</code></td><td>Tagging an entity/relation.</td></tr>
+        <tr><td><code>GS.annotation.detachTag(tagId, targetId)</code></td><td>tagId: string, targetId: string</td><td>void</td><td>Detaches tag, emits <code>annotation.update</code></td><td>Removing a tag from a target.</td></tr>
+        <tr><td><code>GS.annotation.bulkAttachTag(tagId, targetIds)</code></td><td>tagId: string, targetIds: string[]</td><td>Promise&lt;void&gt;</td><td>Bulk tag attach, emits <code>annotation.bulk.attach</code></td><td>Tagging many targets at once.</td></tr>
+        <tr><td><code>GS.annotation.bulkDetachTag(tagId, targetIds)</code></td><td>tagId: string, targetIds: string[]</td><td>Promise&lt;void&gt;</td><td>Bulk tag detach, emits <code>annotation.bulk.detach</code></td><td>Untagging many targets at once.</td></tr>
+        <tr><td><code>GS.annotation.migrateTag(oldTagId, newTagId)</code></td><td>oldTagId: string, newTagId: string</td><td>Promise&lt;number&gt;</td><td>Migrates tags, emits <code>annotation.tag.migrate</code></td><td>Merging or renaming tags across the graph.</td></tr>
+        <tr><td><code>GS.annotation.setFlag(targetId, flag, value)</code></td><td>targetId: string, flag: string, value: boolean</td><td>void</td><td>Sets flag, emits <code>annotation.flag.set</code></td><td>Marking a target with a boolean flag.</td></tr>
+        <tr><td><code>GS.annotation.unsetFlag(targetId, flag)</code></td><td>targetId: string, flag: string</td><td>void</td><td>Clears flag, emits <code>annotation.flag.clear</code></td><td>Removing a flag from a target.</td></tr>
+        <tr><td><code>GS.annotation.getAnnotations(targetId)</code></td><td>targetId: string</td><td>{ notes, tags, flags }</td><td>No mutation</td><td>Getting all annotations on a target.</td></tr>
+        <tr><td><code>GS.annotation.findByFlag(flag, value?)</code></td><td>flag: string, value?: boolean</td><td>targetIds: string[]</td><td>No mutation</td><td>Finding all targets with a flag set.</td></tr>
+        <tr><td><code>GS.annotation.findByTag(tagId)</code></td><td>tagId: string</td><td>targetIds: string[]</td><td>No mutation</td><td>Finding all targets with a tag.</td></tr>
+        <tr><td><code>GS.annotation.exportAnnotations()</code></td><td>—</td><td>Promise&lt;object&gt;</td><td>Exports annotations</td><td>Backing up or sharing annotations.</td></tr>
+        <tr><td><code>GS.annotation.importAnnotations(data, options?)</code></td><td>data: object, options?: { merge? }</td><td>Promise&lt;void&gt;</td><td>Imports annotations, emits <code>annotation.import</code></td><td>Restoring annotations from backup.</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>Versioning & Branching <span class="namespace">GS.versioning</span></h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Method</th>
+          <th>Inputs</th>
+          <th>Output</th>
+          <th>Effect</th>
+          <th>Use when</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td><code>GS.versioning.createVersion(label?)</code></td><td>label?: string</td><td>versionId: string</td><td>Creates snapshot, emits <code>version.create</code></td><td>Checkpointing current graph state.</td></tr>
+        <tr><td><code>GS.versioning.switchVersion(versionId)</code></td><td>versionId: string</td><td>void</td><td>Switches active version, emits <code>version.checkout</code></td><td>Viewing or working on a different version.</td></tr>
+        <tr><td><code>GS.versioning.createBranch(fromVersionId, branchName?)</code></td><td>fromVersionId: string, branchName?: string</td><td>branchId: string</td><td>Creates branch, emits <code>version.branch</code></td><td>Creating a parallel history line.</td></tr>
+        <tr><td><code>GS.versioning.switchBranch(branchId)</code></td><td>branchId: string</td><td>void</td><td>Switches active branch, emits <code>version.current.change</code></td><td>Working on a different branch.</td></tr>
+        <tr><td><code>GS.versioning.getVersions()</code></td><td>—</td><td>version[]</td><td>No mutation</td><td>Listing available versions.</td></tr>
+        <tr><td><code>GS.versioning.getBranches()</code></td><td>—</td><td>branch[]</td><td>No mutation</td><td>Listing available branches.</td></tr>
+        <tr><td><code>GS.versioning.getActiveVersion()</code></td><td>—</td><td>version</td><td>No mutation</td><td>Finding the active version.</td></tr>
+        <tr><td><code>GS.versioning.getActiveBranch()</code></td><td>—</td><td>branch</td><td>No mutation</td><td>Finding the active branch.</td></tr>
+        <tr><td><code>GS.versioning.getVersionMetadata(versionId)</code></td><td>versionId: string</td><td>metadata</td><td>No mutation</td><td>Inspecting version details.</td></tr>
+        <tr><td><code>GS.versioning.deleteVersion(versionId)</code></td><td>versionId: string</td><td>Promise&lt;void&gt;</td><td>Deletes version, emits <code>version.delete</code></td><td>Removing obsolete versions.</td></tr>
+        <tr><td><code>GS.versioning.diff(versionId1, versionId2)</code></td><td>versionId1: string, versionId2: string</td><td>diff object</td><td>Reads versions, emits <code>version.diff</code></td><td>Comparing two versions.</td></tr>
+        <tr><td><code>GS.versioning.mergeBranches(fromBranchId, toBranchId, options?)</code></td><td>fromBranchId: string, toBranchId: string, options?: { strategy? }</td><td>Promise&lt;object&gt;</td><td>Merges branches, emits merge events</td><td>Integrating changes across branches.</td></tr>
+        <tr><td><code>GS.versioning.rebase(branchId, ontoVersionId)</code></td><td>branchId: string, ontoVersionId: string</td><td>Promise&lt;void&gt;</td><td>Rebases branch, emits rebase events</td><td>Replaying branch on a new base.</td></tr>
+        <tr><td><code>GS.versioning.createTag(versionId, tagName)</code></td><td>versionId: string, tagName: string</td><td>tagId: string</td><td>Creates tag, emits <code>version.tag.create</code></td><td>Labeling a version with a readable tag.</td></tr>
+        <tr><td><code>GS.versioning.deleteTag(tagName)</code></td><td>tagName: string</td><td>void</td><td>Deletes tag, emits <code>version.tag.delete</code></td><td>Removing a version tag.</td></tr>
+        <tr><td><code>GS.versioning.listTags()</code></td><td>—</td><td>tag[]</td><td>No mutation</td><td>Listing all version tags.</td></tr>
+        <tr><td><code>GS.versioning.getVersionByTag(tagName)</code></td><td>tagName: string</td><td>version</td><td>No mutation</td><td>Resolving a tag to a version.</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>Cassette Playback <span class="namespace">GS.cassette</span></h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Method</th>
+          <th>Inputs</th>
+          <th>Output</th>
+          <th>Effect</th>
+          <th>Use when</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td><code>GS.cassette.create(versionId, frames)</code></td><td>versionId: string, frames: object[]</td><td>cassetteId: string</td><td>Creates cassette, emits <code>cassette.create</code></td><td>Building a narrative playback sequence.</td></tr>
+        <tr><td><code>GS.cassette.update(cassetteId, patch)</code></td><td>cassetteId: string, patch: object</td><td>void</td><td>Updates cassette, emits <code>cassette.update</code></td><td>Editing cassette metadata or frames.</td></tr>
+        <tr><td><code>GS.cassette.delete(cassetteId)</code></td><td>cassetteId: string</td><td>void</td><td>Deletes cassette, emits <code>cassette.delete</code></td><td>Removing a cassette.</td></tr>
+        <tr><td><code>GS.cassette.play(cassetteId)</code></td><td>cassetteId: string</td><td>void</td><td>Starts playback, emits <code>cassette.player.play</code></td><td>Playing a cassette.</td></tr>
+        <tr><td><code>GS.cassette.pause(cassetteId)</code></td><td>cassetteId: string</td><td>void</td><td>Pauses playback, emits <code>cassette.player.pause</code></td><td>Pausing a cassette.</td></tr>
+        <tr><td><code>GS.cassette.stop(cassetteId)</code></td><td>cassetteId: string</td><td>void</td><td>Stops playback, emits <code>cassette.player.stop</code></td><td>Stopping playback and resetting position.</td></tr>
+        <tr><td><code>GS.cassette.seek(cassetteId, frameIndex)</code></td><td>cassetteId: string, frameIndex: number</td><td>void</td><td>Seeks to frame, emits <code>cassette.player.seek</code></td><td>Jumping to a specific frame.</td></tr>
+        <tr><td><code>GS.cassette.setSpeed(cassetteId, multiplier)</code></td><td>cassetteId: string, multiplier: number</td><td>void</td><td>Changes speed, emits <code>cassette.player.speed.change</code></td><td>Adjusting playback speed.</td></tr>
+        <tr><td><code>GS.cassette.get(cassetteId)</code></td><td>cassetteId: string</td><td>cassette | undefined</td><td>No mutation</td><td>Fetching a cassette by ID.</td></tr>
+        <tr><td><code>GS.cassette.list(versionId)</code></td><td>versionId: string</td><td>cassette[]</td><td>No mutation</td><td>Listing cassettes for a version.</td></tr>
+        <tr><td><code>GS.cassette.getFrames(cassetteId)</code></td><td>cassetteId: string</td><td>frame[]</td><td>No mutation</td><td>Inspecting frames for editing or review.</td></tr>
+        <tr><td><code>GS.cassette.addFrame(cassetteId, frame, index?)</code></td><td>cassetteId: string, frame: object, index?: number</td><td>index: number</td><td>Adds frame, emits <code>cassette.frame.add</code></td><td>Inserting a new frame.</td></tr>
+        <tr><td><code>GS.cassette.removeFrame(cassetteId, index)</code></td><td>cassetteId: string, index: number</td><td>void</td><td>Removes frame, emits <code>cassette.frame.remove</code></td><td>Deleting a frame.</td></tr>
+        <tr><td><code>GS.cassette.swapFrames(cassetteId, i, j)</code></td><td>cassetteId: string, i: number, j: number</td><td>void</td><td>Swaps frames, emits <code>cassette.frame.swap</code></td><td>Reordering frames.</td></tr>
+        <tr><td><code>GS.cassette.updateFrame(cassetteId, index, patch)</code></td><td>cassetteId: string, index: number, patch: object</td><td>void</td><td>Updates frame, emits <code>cassette.frame.update</code></td><td>Editing a single frame.</td></tr>
+        <tr><td><code>GS.cassette.duplicate(cassetteId, label?)</code></td><td>cassetteId: string, label?: string</td><td>newId: string</td><td>Clones cassette, emits <code>cassette.clone</code></td><td>Copying a cassette as a template.</td></tr>
+        <tr><td><code>GS.cassette.getState(cassetteId)</code></td><td>cassetteId: string</td><td>state object</td><td>No mutation</td><td>Inspecting playback state.</td></tr>
+        <tr><td><code>GS.cassette.export(cassetteId)</code></td><td>cassetteId: string</td><td>Promise&lt;object&gt;</td><td>Exports cassette</td><td>Sharing or backing up a cassette.</td></tr>
+        <tr><td><code>GS.cassette.import(cassetteData, versionId)</code></td><td>cassetteData: object, versionId: string</td><td>Promise&lt;string&gt;</td><td>Imports cassette</td><td>Restoring a cassette from export.</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>Storage <span class="namespace">GS.storage</span></h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Method</th>
+          <th>Inputs</th>
+          <th>Output</th>
+          <th>Effect</th>
+          <th>Use when</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td><code>GS.storage.list()</code></td><td>—</td><td>string[]</td><td>No mutation</td><td>Listing available storage provider names.</td></tr>
+        <tr><td><code>GS.storage.listProviders()</code></td><td>—</td><td>ProviderInfo[]</td><td>No mutation</td><td>Listing providers with capabilities and details.</td></tr>
+        <tr><td><code>GS.storage.getCapabilities(providerName?)</code></td><td>providerName?: string</td><td>capabilities</td><td>No mutation</td><td>Inspecting storage feature support.</td></tr>
+        <tr><td><code>GS.storage.use(providerName)</code></td><td>providerName: string</td><td>void</td><td>Sets provider, emits <code>storage.provider.set</code></td><td>Selecting a storage backend.</td></tr>
+        <tr><td><code>GS.storage.getActiveProvider()</code></td><td>—</td><td>string</td><td>No mutation</td><td>Checking which provider is active.</td></tr>
+        <tr><td><code>GS.storage.save()</code></td><td>—</td><td>Promise&lt;void&gt;</td><td>Persists state, emits save events</td><td>Persisting current state.</td></tr>
+        <tr><td><code>GS.storage.load()</code></td><td>—</td><td>Promise&lt;void&gt;</td><td>Loads state, emits load events</td><td>Restoring from storage.</td></tr>
+        <tr><td><code>GS.storage.status()</code></td><td>—</td><td>{ provider, isAvailable, lastSave, sizeBytes, percentUsed }</td><td>No mutation</td><td>Checking storage health and usage.</td></tr>
+        <tr><td><code>GS.storage.clear()</code></td><td>—</td><td>void</td><td>Clears storage, emits <code>storage.clear</code></td><td>Deleting stored data.</td></tr>
+        <tr><td><code>GS.storage.migrate(fromProvider, toProvider)</code></td><td>fromProvider: string, toProvider: string</td><td>Promise&lt;void&gt;</td><td>Migrates data, emits migration events</td><td>Moving data between providers.</td></tr>
+        <tr><td><code>GS.storage.export(options?)</code></td><td>options?: { format? }</td><td>Promise&lt;string|object&gt;</td><td>Exports data</td><td>Backing up storage data.</td></tr>
+        <tr><td><code>GS.storage.import(data, options?)</code></td><td>data: string|object, options?: { format?, merge? }</td><td>Promise&lt;void&gt;</td><td>Imports data, emits import events</td><td>Restoring data from export.</td></tr>
+        <tr><td><code>GS.storage.getStats()</code></td><td>—</td><td>usage stats</td><td>No mutation</td><td>Monitoring storage usage breakdown.</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>Sync / Offline <span class="namespace">GS.sync</span></h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Method</th>
+          <th>Inputs</th>
+          <th>Output</th>
+          <th>Effect</th>
+          <th>Use when</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td><code>GS.sync.goOffline()</code></td><td>—</td><td>void</td><td>Enters offline mode, emits <code>sync.offline.enter</code></td><td>Working without network connectivity.</td></tr>
+        <tr><td><code>GS.sync.goOnline()</code></td><td>—</td><td>void</td><td>Enters online mode, emits <code>sync.online.enter</code></td><td>Resuming online operations.</td></tr>
+        <tr><td><code>GS.sync.sync()</code></td><td>—</td><td>Promise&lt;void&gt;</td><td>Syncs data, emits sync events</td><td>Manually triggering synchronization.</td></tr>
+        <tr><td><code>GS.sync.isOnline()</code></td><td>—</td><td>boolean</td><td>No mutation</td><td>Checking if the system is online.</td></tr>
+        <tr><td><code>GS.sync.getQueueSize()</code></td><td>—</td><td>number</td><td>No mutation</td><td>Checking queued offline mutations.</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>Adapters <span class="namespace">GS.adapters</span></h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Method</th>
+          <th>Inputs</th>
+          <th>Output</th>
+          <th>Effect</th>
+          <th>Use when</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td><code>GS.adapters.list()</code></td><td>—</td><td>string[]</td><td>No mutation</td><td>Listing adapter names.</td></tr>
+        <tr><td><code>GS.adapters.discover()</code></td><td>—</td><td>Promise&lt;AdapterInfo[]&gt;</td><td>Discovers adapters, emits <code>adapter.discover</code></td><td>Finding available adapters dynamically.</td></tr>
+        <tr><td><code>GS.adapters.use(name)</code></td><td>name: string</td><td>void</td><td>Sets adapter, emits <code>adapter.set</code></td><td>Choosing a data source.</td></tr>
+        <tr><td><code>GS.adapters.getActiveAdapter()</code></td><td>—</td><td>adapter instance</td><td>No mutation</td><td>Inspecting current adapter.</td></tr>
+        <tr><td><code>GS.adapters.getSchema(adapterName)</code></td><td>adapterName: string</td><td>Promise&lt;object&gt;</td><td>No mutation</td><td>Understanding adapter output types.</td></tr>
+        <tr><td><code>GS.adapters.getStatus(adapterName)</code></td><td>adapterName: string</td><td>Promise&lt;AdapterStatus&gt;</td><td>No mutation</td><td>Checking adapter health.</td></tr>
+        <tr><td><code>GS.adapters.configure(adapterName, config)</code></td><td>adapterName: string, config: object</td><td>Promise&lt;void&gt;</td><td>Stores config, emits <code>adapter.configure</code></td><td>Setting credentials or adapter settings.</td></tr>
+        <tr><td><code>GS.adapters.getConfig(adapterName)</code></td><td>adapterName: string</td><td>Promise&lt;object&gt;</td><td>No mutation</td><td>Reviewing non-secret adapter config.</td></tr>
+        <tr><td><code>GS.adapters.fetch(options)</code></td><td>options: object</td><td>Promise&lt;void&gt;</td><td>Fetches data, emits fetch events</td><td>Loading data from external source.</td></tr>
+        <tr><td><code>GS.adapters.refresh()</code></td><td>—</td><td>Promise&lt;void&gt;</td><td>Refreshes data, emits refresh events</td><td>Syncing external data while preserving local changes.</td></tr>
+        <tr><td><code>GS.adapters.cancel()</code></td><td>—</td><td>Promise&lt;void&gt;</td><td>Cancels running op, emits <code>adapter.operation.cancel</code></td><td>Stopping a long-running fetch or refresh.</td></tr>
+        <tr><td><code>GS.adapters.getProgress()</code></td><td>—</td><td>progress | null</td><td>No mutation</td><td>Monitoring fetch/refresh progress.</td></tr>
+        <tr><td><code>GS.adapters.getStats()</code></td><td>—</td><td>stats object</td><td>No mutation</td><td>Reviewing adapter usage metrics.</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>Serializers <span class="namespace">GS.serializers</span></h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Method</th>
+          <th>Inputs</th>
+          <th>Output</th>
+          <th>Effect</th>
+          <th>Use when</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td><code>GS.serializers.toJSON(options?)</code></td><td>options?: { pretty? }</td><td>string</td><td>Serializes graph, emits JSON serialize events</td><td>Exporting graph to JSON.</td></tr>
+        <tr><td><code>GS.serializers.fromJSON(json)</code></td><td>json: string</td><td>void</td><td>Deserializes graph, emits JSON deserialize events</td><td>Loading graph from JSON.</td></tr>
+        <tr><td><code>GS.serializers.toHTML()</code></td><td>—</td><td>string</td><td>Serializes graph, emits HTML serialize events</td><td>Exporting graph to HTML.</td></tr>
+        <tr><td><code>GS.serializers.fromHTML(html)</code></td><td>html: string|HTMLElement</td><td>void</td><td>Deserializes graph, emits HTML deserialize events</td><td>Loading graph from HTML.</td></tr>
+        <tr><td><code>GS.serializers.register(formatName, serializer)</code></td><td>formatName: string, serializer: { serialize, deserialize }</td><td>void</td><td>Registers custom serializer</td><td>Adding support for a new format (e.g., GraphML).</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>Events <span class="namespace">GS.events</span></h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Method</th>
+          <th>Inputs</th>
+          <th>Output</th>
+          <th>Effect</th>
+          <th>Use when</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td><code>GS.events.on(eventName, handler)</code></td><td>eventName: string, handler: function</td><td>void</td><td>Subscribes to events</td><td>Listening for system events.</td></tr>
+        <tr><td><code>GS.events.off(eventName, handler)</code></td><td>eventName: string, handler: function</td><td>void</td><td>Unsubscribes from events</td><td>Removing event handlers.</td></tr>
+        <tr><td><code>GS.events.once(eventName, handler)</code></td><td>eventName: string, handler: function</td><td>void</td><td>Subscribes once</td><td>Handling a single occurrence of an event.</td></tr>
+        <tr><td><code>GS.events.emit(name, payload)</code></td><td>name: string, payload: object</td><td>void</td><td>Emits event to bus</td><td>Manually emitting events (advanced use).</td></tr>
+        <tr><td><code>GS.events.list()</code></td><td>—</td><td>string[]</td><td>No mutation</td><td>Listing known event names.</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>Replay <span class="namespace">GS.replay</span></h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Method</th>
+          <th>Inputs</th>
+          <th>Output</th>
+          <th>Effect</th>
+          <th>Use when</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td><code>GS.replay.start(options?)</code></td><td>options?: object</td><td>void</td><td>Starts replay, emits replay events</td><td>Beginning event replay/simulation.</td></tr>
+        <tr><td><code>GS.replay.stop()</code></td><td>—</td><td>void</td><td>Stops replay</td><td>Ending replay mode.</td></tr>
+        <tr><td><code>GS.replay.scrubTo(eventIndex)</code></td><td>eventIndex: number</td><td>void</td><td>Scrubs to index</td><td>Jumping to a specific event in history.</td></tr>
+        <tr><td><code>GS.replay.play()</code></td><td>—</td><td>void</td><td>Resumes replay</td><td>Playing replay from current index.</td></tr>
+        <tr><td><code>GS.replay.pause()</code></td><td>—</td><td>void</td><td>Pauses replay</td><td>Pausing replay playback.</td></tr>
+        <tr><td><code>GS.replay.status()</code></td><td>—</td><td>status object</td><td>No mutation</td><td>Checking replay state.</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>UI Helpers <span class="namespace">GS.ui</span></h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Method</th>
+          <th>Inputs</th>
+          <th>Output</th>
+          <th>Effect</th>
+          <th>Use when</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td><code>GS.ui.setViewMode(mode)</code></td><td>mode: string</td><td>void</td><td>Emits UI events only</td><td>Switching UI presentation mode.</td></tr>
+        <tr><td><code>GS.ui.highlightEntity(id)</code></td><td>id: string</td><td>void</td><td>Emits UI highlight events</td><td>Highlighting an entity in the UI.</td></tr>
+        <tr><td><code>GS.ui.clearHighlight()</code></td><td>—</td><td>void</td><td>Emits UI clear highlight events</td><td>Clearing highlight state.</td></tr>
+      </tbody>
+    </table>
+    <p class="note">UI helpers never mutate core state; they only emit events consumed by renderers.</p>
+  </section>
+
+  <section>
+    <h2>Utilities <span class="namespace">GS.utils</span></h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Method</th>
+          <th>Inputs</th>
+          <th>Output</th>
+          <th>Effect</th>
+          <th>Use when</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td><code>GS.utils.uuid()</code></td><td>—</td><td>string</td><td>No mutation</td><td>Generating a unique ID.</td></tr>
+        <tr><td><code>GS.utils.now()</code></td><td>—</td><td>string (ISO timestamp)</td><td>No mutation</td><td>Getting a timestamp.</td></tr>
+        <tr><td><code>GS.utils.clone(obj)</code></td><td>obj: any</td><td>any</td><td>No mutation</td><td>Deep-cloning objects.</td></tr>
+        <tr><td><code>GS.utils.validateSchema(schema)</code></td><td>schema: object</td><td>validation result</td><td>No mutation</td><td>Validating a schema definition before use.</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>System Modules &amp; Interfaces <span class="namespace">Modules</span></h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Module</th>
+          <th>Exposed Interface</th>
+          <th>Inputs</th>
+          <th>Output</th>
+          <th>Effect</th>
+          <th>Use when</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>Graph</td><td><code>addEntity</code>, <code>updateEntity</code>, <code>removeEntity</code>, <code>addRelation</code>, <code>updateRelation</code>, <code>removeRelation</code>, <code>createRelation</code>, <code>getEntity</code>, <code>getRelation</code>, <code>getSubgraph</code>, <code>serialize</code>, <code>load</code>, <code>undo</code>, <code>redo</code></td><td>entities/relations, IDs, format</td><td>graph data or void</td><td>Primary graph mutations; emits events for all mutations</td><td>Core graph operations and navigation.</td></tr>
+        <tr><td>Entity</td><td><code>create</code>, <code>validate</code>, <code>updateMetadata</code>, <code>archive</code></td><td>entity data, metadata, ID</td><td>entity or validation result</td><td>Defines node shape; validation and archival</td><td>Creating or validating entities before adding to graph.</td></tr>
+        <tr><td>Relation</td><td><code>create</code>, <code>validate</code>, <code>updateMetadata</code>, <code>archive</code></td><td>relation data, metadata, ID</td><td>relation or validation result</td><td>Defines edge shape; validation and archival</td><td>Creating or validating relations before adding to graph.</td></tr>
+        <tr><td>Schema</td><td><code>registerEntityType</code>, <code>registerRelationType</code>, <code>getEntityTypes</code>, <code>getRelationTypes</code>, <code>validateEntity</code>, <code>validateRelation</code></td><td>type definitions, entities/relations</td><td>types or validation result</td><td>Canonical schema enforcement</td><td>Defining and validating the canonical schema.</td></tr>
+        <tr><td>QueryEngine</td><td><code>where</code>, <code>and</code>, <code>or</code>, <code>neighbors</code>, <code>shortestPath</code>, <code>execute</code></td><td>criteria, IDs, graph</td><td>query result</td><td>No mutation; computes query results</td><td>Finding entities/relations or paths.</td></tr>
+        <tr><td>Traversal</td><td><code>bfs</code>, <code>dfs</code>, <code>shortestPath</code></td><td>start/end IDs</td><td>traversal result</td><td>No mutation; computes traversal</td><td>Low-level traversal algorithms.</td></tr>
+        <tr><td>Versioning</td><td><code>createVersion</code>, <code>getCurrentVersion</code>, <code>checkoutVersion</code>, <code>listVersions</code>, <code>getVersionGraph</code></td><td>labels, version IDs</td><td>version data</td><td>Creates immutable snapshots</td><td>Managing history and switching versions.</td></tr>
+        <tr><td>DiffEngine</td><td><code>diff</code>, <code>applyDiff</code></td><td>old/new graphs, diff</td><td>diff object or graph</td><td>Computes/merges differences</td><td>Comparing graphs or applying changes.</td></tr>
+        <tr><td>UndoRedo</td><td><code>record</code>, <code>undo</code>, <code>redo</code>, <code>clear</code></td><td>command, steps</td><td>void</td><td>Mutates graph state via history</td><td>Providing undo/redo for mutations.</td></tr>
+        <tr><td>EventBus</td><td><code>emit</code>, <code>on</code>, <code>off</code>, <code>getHistory</code>, <code>clearHistory</code></td><td>event name, payload, handler</td><td>void or history</td><td>Dispatches/records events</td><td>Observing and emitting system events.</td></tr>
+        <tr><td>AppState</td><td><code>getState</code>, <code>setState</code>, <code>subscribe</code></td><td>partial state, listener</td><td>state snapshot or void</td><td>Updates global reactive state</td><td>Managing app-wide flags (mode, online, version).</td></tr>
+        <tr><td>AnnotationService</td><td><code>annotate</code>, <code>addTag</code>, <code>removeTag</code>, <code>listTags</code>, <code>setFlag</code>, <code>clearFlag</code>, <code>getAnnotations</code></td><td>target IDs, tag/flag data</td><td>annotations or void</td><td>Mutates annotation state</td><td>Notes, tags, flags on entities/relations.</td></tr>
+        <tr><td>AnnotationSchema</td><td><code>validate</code>, <code>getSupportedTypes</code></td><td>annotation</td><td>validation result, types</td><td>No mutation</td><td>Validating annotation payloads.</td></tr>
+        <tr><td>CassettePlayer</td><td><code>loadCassette</code>, <code>play</code>, <code>pause</code>, <code>stop</code>, <code>next</code>, <code>prev</code>, <code>seek</code>, <code>setSpeed</code>, <code>getState</code></td><td>cassette, index, speed</td><td>state or void</td><td>Controls playback state</td><td>Playing narrative sequences.</td></tr>
+        <tr><td>Cassette Service</td><td><code>createCassette</code>, <code>loadCassette</code>, <code>addFrame</code>, <code>removeFrame</code>, <code>updateFrame</code>, <code>reorderFrames</code>, <code>setPointer</code>, <code>getCurrentFrame</code>, <code>validate</code>, <code>serialize</code></td><td>cassette/frame data</td><td>cassette data</td><td>Mutates cassette definitions</td><td>Creating and editing cassette data.</td></tr>
+        <tr><td>HighlightController</td><td><code>highlight</code>, <code>clear</code>, <code>clearAll</code></td><td>id, mode</td><td>void</td><td>Mutates highlight state</td><td>Managing hover/select/play highlights.</td></tr>
+        <tr><td>BaseAdapter</td><td><code>connect</code>, <code>fetchAll</code>, <code>refresh</code>, <code>mapToSchema</code></td><td>config, raw data</td><td>mapped data</td><td>Fetches external data</td><td>Implementing a new adapter.</td></tr>
+        <tr><td>GitHubAdapter</td><td><code>connect</code>, <code>fetchAll</code>, <code>refresh</code></td><td>auth/config</td><td>raw data</td><td>Fetches GitHub data</td><td>Ingesting GitHub repositories/metadata.</td></tr>
+        <tr><td>GitHubMapper</td><td><code>map</code></td><td>raw GitHub data</td><td>canonical graph data</td><td>Maps external to schema</td><td>Normalizing GitHub data for GS.</td></tr>
+        <tr><td>GitHubAuth</td><td><code>authenticate</code>, <code>getToken</code>, <code>revoke</code></td><td>—</td><td>token or void</td><td>Auth state changes</td><td>Managing GitHub authentication.</td></tr>
+        <tr><td>BaseStorage</td><td><code>save</code>, <code>load</code>, <code>clear</code>, <code>capabilities</code></td><td>graph</td><td>graph or capabilities</td><td>Persists state</td><td>Implementing new storage provider.</td></tr>
+        <tr><td>Storage Providers</td><td><code>save</code>, <code>load</code>, <code>clear</code>, <code>capabilities</code></td><td>graph</td><td>graph or capabilities</td><td>Persists state</td><td>Using LocalStorage/IndexedDB/Remote.</td></tr>
+        <tr><td>SyncManager</td><td><code>goOffline</code>, <code>goOnline</code>, <code>isOnline</code>, <code>sync</code>, <code>getQueue</code></td><td>—</td><td>status/queue</td><td>Manages sync state</td><td>Coordinating offline/online transitions.</td></tr>
+        <tr><td>JSONSerializer</td><td><code>serialize</code>, <code>deserialize</code>, <code>validate</code></td><td>graph or JSON</td><td>JSON or graph</td><td>Converts graph ↔ JSON</td><td>Export/import via JSON.</td></tr>
+        <tr><td>HTMLSerializer</td><td><code>serialize</code>, <code>deserialize</code></td><td>graph or DOM</td><td>HTML or graph</td><td>Converts graph ↔ HTML</td><td>Export/import via HTML.</td></tr>
+        <tr><td>BaseRenderer</td><td><code>mount</code>, <code>render</code>, <code>destroy</code></td><td>container, graph, state</td><td>void</td><td>Renders UI</td><td>Implementing a renderer.</td></tr>
+        <tr><td>D3Renderer</td><td><code>render</code>, <code>focus</code></td><td>graph, entityId</td><td>void</td><td>Renders graph view</td><td>Interactive graph visualization.</td></tr>
+        <tr><td>TreeRenderer</td><td><code>render</code>, <code>expand</code>, <code>collapse</code></td><td>graph, entityId</td><td>void</td><td>Renders tree view</td><td>Hierarchical exploration.</td></tr>
+        <tr><td>JSONRenderer</td><td><code>render</code></td><td>graph</td><td>void</td><td>Renders JSON view</td><td>Inspecting graph as JSON.</td></tr>
+        <tr><td>HTMLRenderer</td><td><code>render</code></td><td>graph</td><td>void</td><td>Renders HTML view</td><td>Inspecting graph as HTML.</td></tr>
+        <tr><td>GraphBridge</td><td><code>bind</code>, <code>unbind</code></td><td>renderer</td><td>void</td><td>Bridges UI actions to core</td><td>Connecting renderers to core commands.</td></tr>
+        <tr><td>SyncBridge</td><td><code>bind</code>, <code>unbind</code></td><td>—</td><td>void</td><td>Bridges sync state to UI</td><td>Reflecting online/offline state in UI.</td></tr>
+        <tr><td>UUID</td><td><code>generate</code></td><td>—</td><td>string</td><td>No mutation</td><td>Generating IDs.</td></tr>
+        <tr><td>MarkdownRenderer</td><td><code>render</code></td><td>markdown: string</td><td>HTML string</td><td>No mutation</td><td>Rendering annotation markdown.</td></tr>
+        <tr><td>Utils</td><td><code>debounce</code>, <code>throttle</code>, <code>deepClone</code></td><td>function, delay, object</td><td>function or cloned object</td><td>No mutation</td><td>Shared utilities.</td></tr>
+        <tr><td>app.js (Public API)</td><td><code>init</code>, <code>loadAdapter</code>, <code>loadGraph</code>, <code>getGraph</code>, <code>getState</code>, <code>setRenderer</code>, <code>setStorage</code></td><td>config, adapter, data, renderer, provider</td><td>graph/state or void</td><td>Bootstraps GS public surface</td><td>System entry and wiring from host app.</td></tr>
+      </tbody>
+    </table>
+  </section>
+</body>
+</html>

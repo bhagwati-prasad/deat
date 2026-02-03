@@ -97,7 +97,7 @@ class GitHubAdapter {
       this._updateRateLimit(response);
 
       if (!response.ok) {
-        this._handleErrorResponse(response);
+        await this._handleErrorResponse(response);
       }
 
       const data = await response.json();
@@ -168,7 +168,13 @@ class GitHubAdapter {
    */
   async _handleErrorResponse(response) {
     if (response.status === 403) {
-      const errorBody = await response.text();
+      let errorBody = '';
+      if (typeof response.text === 'function') {
+        errorBody = await response.text();
+      } else if (typeof response.json === 'function') {
+        const jsonBody = await response.json();
+        errorBody = jsonBody?.message || '';
+      }
       if (errorBody.includes('rate limit')) {
         throw {
           code: 632,

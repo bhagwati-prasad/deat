@@ -7,7 +7,7 @@
  * See: ../../../doc/modules/ui/RendererContract.md
  */
 
-import { describe, it, expect, beforeEach } from '@jest/globals';
+import { describe, it, expect, beforeEach, afterEach, jest } from '@jest/globals';
 import BaseRenderer from '../../../src/ui/renderers/base-renderer.js';
 import JSONRenderer from '../../../src/ui/renderers/json-renderer.js';
 import TreeRenderer from '../../../src/ui/renderers/tree-renderer.js';

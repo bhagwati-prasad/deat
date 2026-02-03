@@ -5,6 +5,7 @@
  * See: doc/arch/data.md - Storage adapter pattern
  */
 
+import { jest } from '@jest/globals';
 import LocalStorageAdapter from '../../../src/adapters/storage/local-storage-adapter.js';
 
 describe('LocalStorageAdapter', () => {
@@ -100,16 +101,16 @@ describe('LocalStorageAdapter', () => {
         relations: new Map()
       };
 
-      // Directly set up the error case in the mock
-      const originalSetItem = localStorage.setItem.bind(localStorage);
-      localStorage.setItem = (key, value) => {
+      const storageProto = Object.getPrototypeOf(localStorage);
+      const originalSetItem = storageProto.setItem;
+      const setItemSpy = jest.spyOn(storageProto, 'setItem').mockImplementation(function (key, value) {
         if (key === 'gs-test-graph') {
           const error = new Error('QuotaExceededError');
           error.code = 22;
           throw error;
         }
-        return originalSetItem(key, value);
-      };
+        return originalSetItem.call(this, key, value);
+      });
 
       try {
         await expect(adapter.save('test-graph', state)).rejects.toMatchObject({
@@ -117,7 +118,7 @@ describe('LocalStorageAdapter', () => {
           message: expect.stringContaining('quota')
         });
       } finally {
-        localStorage.setItem = originalSetItem;
+        setItemSpy.mockRestore();
       }
     });
 

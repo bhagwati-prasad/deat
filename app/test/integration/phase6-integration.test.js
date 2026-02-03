@@ -5,7 +5,7 @@
  * End-to-end flow: Graph mutations → EventBus → UIBridge → Renderer updates
  */
 
-import { describe, it, expect, beforeEach } from '@jest/globals';
+import { describe, it, expect, beforeEach, jest } from '@jest/globals';
 import { Graph } from '../../src/core/graph.js';
 import { Schema } from '../../src/core/schema.js';
 import { EventBus } from '../../src/core/event/bus.js';
@@ -158,6 +158,10 @@ describe('Phase 6 Integration: UI Layer with Core', () => {
   });
 
   describe('Command Execution via Bridge', () => {
+    beforeEach(() => {
+      bridge.setMode('edit');
+    });
+
     it('should execute addEntity command from UI', () => {
       const renderer = new D3Renderer();
       bridge.setRenderer(renderer, container);
@@ -306,7 +310,7 @@ describe('Phase 6 Integration: UI Layer with Core', () => {
 
       expect(() => {
         bridge.executeCommand('invalidCommand', {});
-      }).not.toThrow();
+      }).toThrow();
     });
 
     it('should handle missing entity in addRelation', () => {

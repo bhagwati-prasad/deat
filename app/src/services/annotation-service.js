@@ -12,7 +12,11 @@
 export class AnnotationService {
   constructor(graph, options = {}) {
     this.graph = graph;
-    this.eventBus = options.bus;
+    if (options && typeof options.emit === 'function' && typeof options.subscribe === 'function') {
+      this.eventBus = options;
+    } else {
+      this.eventBus = options.bus;
+    }
     
     // Map<targetId, Annotation[]>
     this.annotations = new Map();

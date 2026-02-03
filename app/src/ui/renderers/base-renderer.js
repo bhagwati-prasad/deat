@@ -70,9 +70,16 @@ export class BaseRenderer {
    * @param {string} targetId - Element to unhighlight (optional)
    */
   clearHighlight(targetType, targetId) {
-    if (targetId) {
-      this.highlightedElements.delete(targetId);
-    } else if (targetType) {
+    let resolvedTargetType = targetType;
+    let resolvedTargetId = targetId;
+    if (resolvedTargetId === undefined && resolvedTargetType && !['entity', 'relation'].includes(resolvedTargetType)) {
+      resolvedTargetId = resolvedTargetType;
+      resolvedTargetType = undefined;
+    }
+
+    if (resolvedTargetId) {
+      this.highlightedElements.delete(resolvedTargetId);
+    } else if (resolvedTargetType) {
       // Clear all of a specific type
       const toDelete = [];
       for (const [id, _] of this.highlightedElements.entries()) {

@@ -37,13 +37,26 @@ export class D3Renderer extends BaseRenderer {
     if (!container) return;
 
     container.innerHTML = '';
-    container.className = 'gs-d3-renderer renderer-content active';
+    container.className = 'gs-d3-renderer';
     container.style.cssText = `
       background: ${this.theme === 'dark' ? '#1a1a1a' : '#fafafa'};
       width: 100%;
       height: 100%;
       position: relative;
     `;
+
+    const placeholder = document.createElement('div');
+    placeholder.className = 'gs-d3-placeholder';
+    placeholder.textContent = 'D3 Renderer';
+    placeholder.style.cssText = `
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      font-size: 12px;
+      color: ${this.theme === 'dark' ? '#888' : '#666'};
+      z-index: 1;
+    `;
+    container.appendChild(placeholder);
 
     // Create SVG canvas
     this._createSVGCanvas();
@@ -495,12 +508,25 @@ export class D3Renderer extends BaseRenderer {
   }
 
   clearHighlight(targetType, targetId) {
-    super.clearHighlight(targetType, targetId);
-    if (this.selectedNodeId === targetId) {
-      this.selectedNodeId = null;
+    let resolvedTargetType = targetType;
+    let resolvedTargetId = targetId;
+    if (resolvedTargetId === undefined && resolvedTargetType && !['entity', 'relation'].includes(resolvedTargetType)) {
+      resolvedTargetId = resolvedTargetType;
+      resolvedTargetType = undefined;
     }
-    if (this.hoveredNodeId === targetId) {
+
+    super.clearHighlight(resolvedTargetType, resolvedTargetId);
+
+    if (!resolvedTargetId) {
+      this.selectedNodeId = null;
       this.hoveredNodeId = null;
+    } else {
+      if (this.selectedNodeId === resolvedTargetId) {
+        this.selectedNodeId = null;
+      }
+      if (this.hoveredNodeId === resolvedTargetId) {
+        this.hoveredNodeId = null;
+      }
     }
     this._updateNodeVisuals();
   }

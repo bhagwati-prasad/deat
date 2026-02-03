@@ -6,7 +6,10 @@
   "main": "src/index.js",
   "scripts": {
     "test": "NODE_OPTIONS=--experimental-vm-modules jest",
-    "test:html": "REPORT_PATH=$(node -e \"const fs=require('fs');const path=require('path');const dir='test_result';fs.mkdirSync(dir,{recursive:true});const ts=new Date().toISOString().replace(/[:.]/g,'-');process.stdout.write(path.join(dir,`test-${ts}.html`));\") && JEST_HTML_REPORTER_OUTPUT_PATH=$REPORT_PATH NODE_OPTIONS=--experimental-vm-modules jest --reporters=default --reporters=jest-html-reporter",
+    "test:html": "REPORT_PATH=$(node -e \"const fs=require('fs');const path=require('path');const dir='test_result';fs.mkdirSync(dir,{recursive:true});const ts=new Date().toISOString().replace(/[:.]/g,'-');const file='test-'+ts+'.html';process.stdout.write(path.join(dir,file));\") && JEST_HTML_REPORTER_OUTPUT_PATH=$REPORT_PATH NODE_OPTIONS=--experimental-vm-modules jest --reporters=default --reporters=jest-html-reporter",
+    "test:unit": "NODE_OPTIONS=--experimental-vm-modules jest --testPathPattern=\"test/(adapters|core|services|ui)/\"",
+    "test:e2e": "NODE_OPTIONS=--experimental-vm-modules jest --testPathPattern=\"test/integration/\"",
+    "test:performance": "NODE_OPTIONS=--experimental-vm-modules jest --testPathPattern=\"test/performance/\"",
     "test:watch": "NODE_OPTIONS=--experimental-vm-modules jest --watch",
     "test:coverage": "NODE_OPTIONS=--experimental-vm-modules jest --coverage",
     "dev": "node scripts/dev-server.js",

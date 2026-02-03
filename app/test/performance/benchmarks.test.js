@@ -20,7 +20,7 @@
 
 import { Graph } from '../../src/core/graph.js';
 import { Schema } from '../../src/core/schema.js';
-import { EventBus } from '../../src/utils/event-emitter.js';
+import { EventBus } from '../../src/core/event/bus.js';
 import { QueryEngine } from '../../src/core/query-engine.js';
 import { DiffEngine } from '../../src/core/diff-engine.js';
 import { Versioning } from '../../src/core/versioning.js';
@@ -50,8 +50,8 @@ const createTestEntity = (id, type = 'node') => ({
 const createTestRelation = (id, sourceId, targetId, type = 'links') => ({
   id: `rel_${id}`,
   type,
-  source: sourceId,
-  target: targetId,
+  from: sourceId,
+  to: targetId,
   metadata: {
     weight: Math.random(),
     timestamp: Date.now()
@@ -90,7 +90,7 @@ describe('Performance: Large Graph Operations', () => {
 
     console.log(`✓ Added 10,000 entities in ${time.toFixed(2)}ms`);
     expect(time).toBeLessThan(2000);
-    expect(graph.getEntities().length).toBe(10000);
+    expect(graph.serialize().entities.length).toBe(10000);
   });
 
   test('should handle 50,000 entities in <5s', async () => {
@@ -102,7 +102,7 @@ describe('Performance: Large Graph Operations', () => {
 
     console.log(`✓ Added 50,000 entities in ${time.toFixed(2)}ms`);
     expect(time).toBeLessThan(5000);
-    expect(graph.getEntities().length).toBe(50000);
+    expect(graph.serialize().entities.length).toBe(50000);
   }, 10000); // Extend timeout for this test
 
   test('should query large graph in <500ms', async () => {
@@ -112,10 +112,11 @@ describe('Performance: Large Graph Operations', () => {
     }
 
     const time = await measureTime(async () => {
-      queryEngine.findEntities({
-        type: 'node',
-        filter: e => e.metadata.index > 5000 && e.metadata.index < 6000
-      });
+      queryEngine
+        .from('node')
+        .where(queryEngine.gt('metadata.index', 5000))
+        .where(queryEngine.lt('metadata.index', 6000))
+        .execute();
     });
 
     console.log(`✓ Queried 10,000 entities in ${time.toFixed(2)}ms`);
@@ -146,8 +147,8 @@ describe('Performance: Large Graph Operations', () => {
     });
 
     console.log(`✓ Created graph with ${entityCount} entities and ${relationCount} relations in ${time.toFixed(2)}ms`);
-    expect(graph.getEntities().length).toBe(entityCount);
-    expect(graph.getRelations().length).toBeLessThanOrEqual(relationCount);
+    expect(graph.serialize().entities.length).toBe(entityCount);
+    expect(graph.serialize().relations.length).toBeLessThanOrEqual(relationCount);
   });
 });
 
@@ -211,9 +212,11 @@ describe('Performance: Individual Operations', () => {
     for (let i = 0; i < iterations; i++) {
       const entityId = `node_${i + 100}`;
       const time = await measureTime(async () => {
-        graph.updateEntity(entityId, { 
-          title: `Updated ${i}`,
-          value: i * 2
+        graph.updateEntity(entityId, {
+          metadata: {
+            title: `Updated ${i}`,
+            value: i * 2
+          }
         });
       });
       times.push(time);
@@ -265,8 +268,8 @@ describe('Performance: Query Operations', () => {
         graph.addRelation({
           id: `rel_${i}`,
           type: 'links',
-          source,
-          target,
+          from: source,
+          to: target,
           metadata: {}
         });
       }
@@ -275,7 +278,7 @@ describe('Performance: Query Operations', () => {
 
   test('should find entities by type quickly', async () => {
     const time = await measureTime(async () => {
-      queryEngine.findEntities({ type: 'node' });
+      queryEngine.from('node').execute();
     });
 
     console.log(`✓ Find all entities by type: ${time.toFixed(2)}ms`);
@@ -284,10 +287,11 @@ describe('Performance: Query Operations', () => {
 
   test('should filter entities efficiently', async () => {
     const time = await measureTime(async () => {
-      queryEngine.findEntities({
-        type: 'node',
-        filter: e => e.metadata.category === 'A' && e.metadata.value > 50
-      });
+      queryEngine
+        .from('node')
+        .where(queryEngine.eq('metadata.category', 'A'))
+        .where(queryEngine.gt('metadata.value', 50))
+        .execute();
     });
 
     console.log(`✓ Filter entities: ${time.toFixed(2)}ms`);
@@ -298,10 +302,11 @@ describe('Performance: Query Operations', () => {
     const startNode = 'node_0';
     
     const time = await measureTime(async () => {
-      queryEngine.traverse(startNode, { 
-        maxDepth: 3,
-        direction: 'outgoing'
-      });
+      queryEngine
+        .from('node')
+        .where(queryEngine.eq('id', startNode))
+        .traverse('links', 'out')
+        .execute();
     });
 
     console.log(`✓ Traverse graph (depth 3): ${time.toFixed(2)}ms`);
@@ -339,7 +344,7 @@ describe('Performance: Diff and Versioning', () => {
     }
 
     const time = await measureTime(async () => {
-      diffEngine.diff(graph1.toJSON(), graph2.toJSON());
+      diffEngine.diff(graph1.serialize(), graph2.serialize());
     });
 
     console.log(`✓ Computed diff of 1000 entities: ${time.toFixed(2)}ms`);
@@ -353,7 +358,7 @@ describe('Performance: Diff and Versioning', () => {
     }
 
     const time = await measureTime(async () => {
-      versioning.createSnapshot('Performance test');
+      versioning.createVersion({ message: 'Performance test' });
     });
 
     console.log(`✓ Created snapshot of 5000 entities: ${time.toFixed(2)}ms`);
@@ -366,7 +371,7 @@ describe('Performance: Diff and Versioning', () => {
       graph1.addEntity(createTestEntity(i));
     }
     
-    const snapshotId = versioning.createSnapshot('Test');
+    const snapshot = versioning.createVersion({ message: 'Test' });
     
     // Modify graph
     for (let i = 0; i < 100; i++) {
@@ -374,7 +379,7 @@ describe('Performance: Diff and Versioning', () => {
     }
 
     const time = await measureTime(async () => {
-      versioning.restoreSnapshot(snapshotId);
+      versioning.switchToVersion(snapshot.id);
     });
 
     console.log(`✓ Restored snapshot: ${time.toFixed(2)}ms`);
@@ -394,7 +399,7 @@ describe('Performance: Undo/Redo', () => {
     });
 
     graph = new Graph(eventBus, schema);
-    undoRedo = new UndoRedoManager(graph, eventBus);
+    undoRedo = new UndoRedoManager(graph);
   });
 
   test('should handle large undo stack efficiently', async () => {
@@ -519,7 +524,7 @@ describe('Performance: Event System', () => {
 
   test('should handle high-frequency events', async () => {
     const listener = () => { eventCount++; };
-    eventBus.on('test.event', listener);
+    eventBus.subscribe('test.event', listener);
 
     const time = await measureTime(async () => {
       for (let i = 0; i < 10000; i++) {
@@ -535,7 +540,7 @@ describe('Performance: Event System', () => {
   test('should handle many listeners efficiently', async () => {
     // Add 100 listeners
     for (let i = 0; i < 100; i++) {
-      eventBus.on('test.event', () => { eventCount++; });
+      eventBus.subscribe('test.event', () => { eventCount++; });
     }
 
     const time = await measureTime(async () => {

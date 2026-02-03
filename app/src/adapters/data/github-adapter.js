@@ -211,7 +211,16 @@ class GitHubAdapter {
    * @private
    */
   _getNextPageUrl(response) {
-    const linkHeader = response.headers.get('Link');
+    if (!response.headers) return null;
+
+    let linkHeader = null;
+    if (typeof response.headers.get === 'function') {
+      linkHeader = response.headers.get('Link') || response.headers.get('link');
+    } else if (response.headers instanceof Map) {
+      linkHeader = response.headers.get('Link') || response.headers.get('link');
+    } else {
+      linkHeader = response.headers.Link || response.headers.link;
+    }
     if (!linkHeader) return null;
 
     // Parse Link header: <url>; rel="next", <url>; rel="last"

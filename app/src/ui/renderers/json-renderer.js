@@ -16,6 +16,7 @@ export class JSONRenderer extends BaseRenderer {
     this.searchTerm = '';
     this.searchInput = null;
     this.jsonTextarea = null;
+    this.jsonPre = null;
     this.isEditable = true;
   }
 
@@ -42,6 +43,22 @@ export class JSONRenderer extends BaseRenderer {
     const contentDiv = document.createElement('div');
     contentDiv.className = 'json-content';
     contentDiv.style.cssText = 'flex: 1; overflow: hidden; padding: 0; position: relative;';
+
+    // Create read-only pre (for compatibility with tests/legacy UI)
+    this.jsonPre = document.createElement('pre');
+    this.jsonPre.className = 'json-pre';
+    this.jsonPre.style.cssText = `
+      margin: 0;
+      padding: 20px;
+      display: none;
+      white-space: pre-wrap;
+      word-break: break-word;
+      background: ${this.theme === 'dark' ? '#1e1e1e' : '#f5f5f5'};
+      color: ${this.theme === 'dark' ? '#d4d4d4' : '#333'};
+      font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+      font-size: 13px;
+      line-height: 1.6;
+    `;
     
     // Create editable textarea
     this.jsonTextarea = document.createElement('textarea');
@@ -89,6 +106,7 @@ export class JSONRenderer extends BaseRenderer {
       }
     });
     
+    contentDiv.appendChild(this.jsonPre);
     contentDiv.appendChild(this.jsonTextarea);
     container.appendChild(contentDiv);
   }
@@ -186,12 +204,18 @@ export class JSONRenderer extends BaseRenderer {
 
     if (!graphSnapshot) {
       this.jsonTextarea.value = '// No data to display';
+      if (this.jsonPre) {
+        this.jsonPre.textContent = this.jsonTextarea.value;
+      }
       return;
     }
 
     // Pretty print the JSON
     const json = JSON.stringify(graphSnapshot, null, 2);
     this.jsonTextarea.value = json;
+    if (this.jsonPre) {
+      this.jsonPre.textContent = json;
+    }
     
     // Apply syntax highlighting if search is active
     if (this.searchTerm) {

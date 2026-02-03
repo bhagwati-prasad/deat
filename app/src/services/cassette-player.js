@@ -152,6 +152,8 @@ export class CassettePlayer {
       cassetteId,
       frameCount: cassette.frames.length
     });
+
+    this.nextFrame();
   }
 
   /**

@@ -31,9 +31,9 @@ class GraphManager {
       eventBus: eventBus,
       schema: schema,
       queryEngine: new QueryEngine(graph),
-      undoRedo: new UndoRedoManager(graph, eventBus),
-      annotationService: new AnnotationService(graph, eventBus),
-      cassettePlayer: new CassettePlayer(graph, eventBus),
+      undoRedo: new UndoRedoManager(graph),
+      annotationService: new AnnotationService(graph, { bus: eventBus }),
+      cassettePlayer: new CassettePlayer({ bus: eventBus }),
       uiBridge: new UIBridge(graph, eventBus),
       createdAt: new Date()
     });
@@ -120,6 +120,8 @@ let recordedFrames = [];
 let isRecording = false;
 let recordingStartTime = 0;
 let selectedEntity = null;
+let selectedCassetteId = null;
+let lastScrubbedFrameIndex = -1;
 
 // ============= Initialize Renderers =============
 const d3Container = document.getElementById('d3-renderer');
@@ -285,15 +287,17 @@ function createSampleCassette() {
   };
   
   // Add to cassette player
-  cassettePlayer.cassettes = cassettePlayer.cassettes || new Map();
-  cassettePlayer.cassettes.set(sampleCassette.id, sampleCassette);
+  cassettePlayer.play(sampleCassette.id, sampleCassette);
+  cassettePlayer.stop();
+  selectedCassetteId = sampleCassette.id;
+  lastScrubbedFrameIndex = -1;
   
   // Update cassette list UI
   updateCassetteList();
 }
 
 createSampleData();
-graphManager.getActiveGraph().uiBridge.setRenderer(d3Renderer);
+graphManager.getActiveGraph().uiBridge.setRenderer(d3Renderer, d3Container);
 
 // ============= Graph List UI Management =============
 function updateGraphsList() {
@@ -724,8 +728,10 @@ document.getElementById('save-cassette-btn').addEventListener('click', () => {
     version: '1.0.0'
   };
   const cassettePlayer = graphManager.getActiveGraph().cassettePlayer;
-  if (!cassettePlayer.cassettes) cassettePlayer.cassettes = new Map();
-  cassettePlayer.cassettes.set(cassette.id, cassette);
+  cassettePlayer.play(cassette.id, cassette);
+  cassettePlayer.stop();
+  selectedCassetteId = cassette.id;
+  lastScrubbedFrameIndex = -1;
   
   recordedFrames = [];
   document.getElementById('record-btn').style.background = 'var(--bg-primary)';
@@ -746,6 +752,8 @@ document.getElementById('play-btn').addEventListener('click', () => {
     return;
   }
   const cassetteId = selectedCassette.dataset.id;
+  selectedCassetteId = cassetteId;
+  lastScrubbedFrameIndex = -1;
   cassettePlayer.play(cassetteId);
   updateCassettePlayback();
 });
@@ -765,33 +773,39 @@ document.getElementById('stop-btn').addEventListener('click', () => {
 // Scrubber functionality
 document.getElementById('cassette-scrubber').addEventListener('click', (e) => {
   const cassettePlayer = graphManager.getActiveGraph().cassettePlayer;
-  const cassette = cassettePlayer.getCurrentCassette();
-  if (!cassette || !cassettePlayer.isPlaying()) return;
+  const cassette = cassettePlayer.getCurrentCassette() || (selectedCassetteId ? cassettePlayer.getCassette(selectedCassetteId) : null);
+  if (!cassette) return;
   
   const rect = e.currentTarget.getBoundingClientRect();
   const percent = (e.clientX - rect.left) / rect.width;
-  const frameIndex = Math.floor(percent * cassette.frames.length) - 1;
-  cassettePlayer.seek(Math.max(0, Math.min(frameIndex, cassette.frames.length - 1)));
+  const frameIndex = Math.floor(percent * cassette.frames.length);
+  const targetIndex = Math.max(0, Math.min(frameIndex, cassette.frames.length - 1));
+  selectedCassetteId = selectedCassetteId || cassette.id;
+  lastScrubbedFrameIndex = targetIndex;
+  cassettePlayer.stop();
   updateCassettePlayback();
 });
 
 // ============= Cassette UI Functions =============
 function updateCassetteList() {
   const cassettePlayer = graphManager.getActiveGraph().cassettePlayer;
-  const cassettes = cassettePlayer.cassettes || new Map();
+  const cassettes = cassettePlayer.getCassettes();
   const listEl = document.getElementById('cassette-list');
   
   listEl.innerHTML = '';
   
-  if (cassettes.size === 0) {
+  if (cassettes.length === 0) {
     listEl.innerHTML = '<div style="padding: var(--spacing-md); color: var(--text-secondary); font-size: 11px;"><em>No cassettes</em></div>';
     return;
   }
   
-  cassettes.forEach((cassette, id) => {
+  cassettes.forEach((cassette) => {
     const item = document.createElement('div');
     item.className = 'cassette-item';
-    item.dataset.id = id;
+    item.dataset.id = cassette.id;
+    if (cassette.id === selectedCassetteId) {
+      item.classList.add('active');
+    }
     item.innerHTML = `
       <div class="cassette-item-title">${cassette.name}</div>
       <div class="cassette-item-meta">${cassette.frames?.length || 0} frames</div>
@@ -802,13 +816,9 @@ function updateCassetteList() {
       item.classList.add('active');
       document.getElementById('play-btn').disabled = false;
       
-      // Set the selected cassette as current in the cassette player
       const cassetteId = item.dataset.id;
-      const cassette = cassettePlayer.cassettes.get(cassetteId);
-    
-      // Store current cassette ID in the player (use play with no autostart)
-      cassettePlayer.play(cassetteId);
-      cassettePlayer.stop(); // Stop after setting so it doesn't auto-play
+      selectedCassetteId = cassetteId;
+      lastScrubbedFrameIndex = -1;
     
       //document.getElementById('play-btn').disabled = false;
       updateCassettePlayback();
@@ -820,7 +830,7 @@ function updateCassetteList() {
 
 function updateCassettePlayback() {
   const cassettePlayer = graphManager.getActiveGraph().cassettePlayer;
-  const cassette = cassettePlayer.getCurrentCassette();
+  const cassette = cassettePlayer.getCurrentCassette() || (selectedCassetteId ? cassettePlayer.getCassette(selectedCassetteId) : null);
   
   if (!cassette) {
     document.getElementById('current-frame-cassette').textContent = '0';
@@ -833,16 +843,18 @@ function updateCassettePlayback() {
     return;
   }
   
-  const frameIndex = cassettePlayer.getCurrentFrameIndex();
+  const playbackFrameIndex = cassettePlayer.getCurrentFrameIndex();
+  const frameIndex = cassettePlayer.isPlaying() ? playbackFrameIndex : lastScrubbedFrameIndex;
   const totalFrames = cassette.frames.length;
   const isPlaying = cassettePlayer.isPlaying();
   
   // Update frame display
-  document.getElementById('current-frame-cassette').textContent = frameIndex + 1;
+  const displayFrameIndex = frameIndex >= 0 ? frameIndex + 1 : 0;
+  document.getElementById('current-frame-cassette').textContent = displayFrameIndex;
   document.getElementById('total-frames-cassette').textContent = totalFrames;
   
   // Update scrubber
-  const progress = totalFrames > 0 ? ((frameIndex + 1) / totalFrames) * 100 : 0;
+  const progress = totalFrames > 0 && frameIndex >= 0 ? ((frameIndex + 1) / totalFrames) * 100 : 0;
   document.getElementById('cassette-scrubber-track').style.setProperty('--progress', progress + '%');
   
   // Update button states
@@ -897,7 +909,7 @@ eventBus.subscribe('cassette.play.ended', (event) => {
 // Reset
 document.getElementById('reset-btn').addEventListener('click', () => {
   if (confirm('Reset current graph?')) {
-    getActiveGraph().reset();
+    getActiveGraph().load({ entities: [], relations: [] });
     recordedFrames = [];
     isRecording = false;
     selectedEntity = null;
@@ -909,8 +921,8 @@ document.getElementById('reset-btn').addEventListener('click', () => {
 });
 
 // Listen to graph events
-eventBus.subscribe('*', (event) => {
-  if (isRecording && event.type !== 'annotation' && event.type !== 'cassette') {
+eventBus.subscribe('graph.*', (event) => {
+  if (isRecording) {
     recordedFrames.push({
       type: event.type,
       timestamp: Date.now() - recordingStartTime,

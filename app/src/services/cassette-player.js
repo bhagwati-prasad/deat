@@ -148,6 +148,8 @@ export class CassettePlayer {
     this.#isPlaying = true;
     this.#isPaused = false;
 
+    this.#syncPlaybackState(cassette);
+
     this.#bus?.emit('cassette.play.started', {
       cassetteId,
       frameCount: cassette.frames.length
@@ -181,6 +183,7 @@ export class CassettePlayer {
   stop() {
     const cassetteId = this.#currentCassetteId;
     const framesPlayed = this.#currentFrameIndex + 1;
+    const cassette = cassetteId ? this.#cassettes.get(cassetteId) : null;
 
     this.#isPlaying = false;
     this.#isPaused = false;
@@ -188,6 +191,10 @@ export class CassettePlayer {
     this.#currentCassetteId = null;
     
     this.#clearFrameTimers();
+
+    if (cassette) {
+      this.#syncPlaybackState(cassette);
+    }
 
     if (cassetteId) {
       this.#bus?.emit('cassette.play.ended', {
@@ -229,6 +236,8 @@ export class CassettePlayer {
       this.stop();
       return;
     }
+
+    this.#syncPlaybackState(cassette);
 
     const frame = cassette.frames[this.#currentFrameIndex];
 
@@ -273,6 +282,8 @@ export class CassettePlayer {
 
     this.#currentFrameIndex = Math.max(-1, this.#currentFrameIndex - 1);
 
+    this.#syncPlaybackState(cassette);
+
     // Emit frame.enter if not at start
     if (this.#currentFrameIndex >= 0) {
       const frame = cassette.frames[this.#currentFrameIndex];
@@ -312,6 +323,8 @@ export class CassettePlayer {
     }
 
     this.#currentFrameIndex = validIndex;
+
+    this.#syncPlaybackState(cassette);
 
     // Emit enter for new frame if valid
     if (validIndex >= 0 && validIndex < cassette.frames.length) {
@@ -430,5 +443,39 @@ export class CassettePlayer {
   #clearFrameTimers() {
     this.#frameTimers.forEach(timer => clearTimeout(timer));
     this.#frameTimers = [];
+  }
+
+  #syncPlaybackState(cassette) {
+    if (!cassette) return;
+
+    const frames = cassette.frames || [];
+    const plannedTargets = Array.from(
+      new Set(frames.map(frame => frame?.targetId).filter(Boolean))
+    );
+
+    const elapsedSet = new Set();
+    if (this.#currentFrameIndex > 0) {
+      for (let i = 0; i < this.#currentFrameIndex; i += 1) {
+        const targetId = frames[i]?.targetId;
+        if (targetId) elapsedSet.add(targetId);
+      }
+    }
+
+    const currentTargetId =
+      this.#currentFrameIndex >= 0 && this.#currentFrameIndex < frames.length
+        ? frames[this.#currentFrameIndex]?.targetId
+        : null;
+
+    cassette.playback = {
+      plannedTargets,
+      elapsedTargets: Array.from(elapsedSet),
+      currentTargetId,
+      currentFrameIndex: this.#currentFrameIndex
+    };
+
+    this.#bus?.emit('cassette.playback.state', {
+      cassetteId: cassette.id,
+      playback: cassette.playback
+    });
   }
 }

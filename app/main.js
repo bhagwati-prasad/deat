@@ -246,13 +246,13 @@ function createSampleCassette() {
       },
       {
         targetId: 'project_graphsense',
-        action: 'highlight',
+        action: 'focus',
         duration: 1500,
         metadata: { label: 'GraphSense Project' }
       },
       {
         targetId: 'person_bob',
-        action: 'highlight',
+        action: (frame, renderer, targetType, targetId) => {console.log(frame, renderer, targetType, targetId)},
         duration: 1200,
         metadata: { label: 'Bob - Designer' }
       },

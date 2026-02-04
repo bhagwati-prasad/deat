@@ -101,6 +101,22 @@ export class BaseRenderer {
   }
 
   /**
+   * Apply cassette playback highlight state
+   *
+   * @param {Object} playback - { plannedTargets, elapsedTargets, currentTargetId, currentFrameIndex }
+   */
+  setCassettePlaybackState(playback) {
+    // Subclasses implement visual class updates
+  }
+
+  /**
+   * Clear cassette playback highlight state
+   */
+  clearCassettePlaybackState() {
+    // Subclasses implement visual class updates
+  }
+
+  /**
    * Focus on a specific element (zoom/scroll into view)
    *
    * @param {string} targetType - 'entity' | 'relation' | 'subgraph'

@@ -210,9 +210,11 @@ export class UIBridge {
       if (this.renderer && targetId) {
         try {
           if (action === 'highlight' && this.renderer.highlight) {
-            this.renderer.highlight(targetType || 'entity', targetId, 'play');
+            this.renderer.highlight(targetType || 'entity', targetId, 'custom');
           } else if (action === 'focus' && this.renderer.focus) {
             this.renderer.focus(targetType || 'entity', targetId);
+          } else if(typeof action === 'function') {
+            action(event, this.renderer, targetType || 'entity', targetId);
           }
         } catch (err) {
           console.error('Cassette frame action failed:', err);
@@ -220,8 +222,20 @@ export class UIBridge {
       }
     };
 
+    const onCassettePlaybackState = (event) => {
+      const playback = event.data?.playback;
+      if (this.renderer && this.renderer.setCassettePlaybackState && playback) {
+        try {
+          this.renderer.setCassettePlaybackState(playback);
+        } catch (err) {
+          console.error('Cassette playback state update failed:', err);
+        }
+      }
+    };
+
     this._unsubscribers.push(
       this.bus.subscribe('cassette.frame.enter', onCassetteFrame),
+      this.bus.subscribe('cassette.playback.state', onCassettePlaybackState),
       this.bus.subscribe('cassette.player.play', () => {
         if (this.renderer && this.renderer.setMode) {
           this.renderer.setMode('cassette');
@@ -233,6 +247,14 @@ export class UIBridge {
         }
         if (this.renderer && this.renderer.clearAllHighlights) {
           this.renderer.clearAllHighlights();
+        }
+        if (this.renderer && this.renderer.clearCassettePlaybackState) {
+          this.renderer.clearCassettePlaybackState();
+        }
+      }),
+      this.bus.subscribe('cassette.play.ended', () => {
+        if (this.renderer && this.renderer.clearCassettePlaybackState) {
+          this.renderer.clearCassettePlaybackState();
         }
       })
     );

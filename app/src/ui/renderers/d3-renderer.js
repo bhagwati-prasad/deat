@@ -25,6 +25,9 @@ export class D3Renderer extends BaseRenderer {
     this.linkElements = null;
     this.selectedNodeId = null;
     this.hoveredNodeId = null;
+    this.cassettePlannedTargets = new Set();
+    this.cassetteElapsedTargets = new Set();
+    this.cassetteCurrentTargetId = null;
     this.useWebGL = options.useWebGL || false;
     this.zoom = null;
     this.transform = { x: 0, y: 0, k: 1 };
@@ -224,6 +227,9 @@ export class D3Renderer extends BaseRenderer {
       const nodeGroup = this._createNodeElement(node);
       nodesGroup.appendChild(nodeGroup);
     });
+
+    this._updateNodeVisuals();
+    this._updateLinkVisuals();
   }
   
   _renderD3Graph() {
@@ -233,6 +239,7 @@ export class D3Renderer extends BaseRenderer {
 
   _createLinkElement(link) {
     const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    line.classList.add('gs-link');
     line.setAttribute('data-link-id', link.id);
     line.setAttribute('stroke', this.theme === 'dark' ? '#555' : '#999');
     line.setAttribute('stroke-width', '2');
@@ -256,6 +263,7 @@ export class D3Renderer extends BaseRenderer {
 
   _createNodeElement(node) {
     const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    g.classList.add('gs-node');
     g.setAttribute('data-node-id', node.id);
     g.setAttribute('transform', `translate(${node.x},${node.y})`);
     g.style.cursor = 'grab';
@@ -266,15 +274,6 @@ export class D3Renderer extends BaseRenderer {
     circle.setAttribute('fill', this._getNodeColor(node.type));
     circle.setAttribute('stroke', '#fff');
     circle.setAttribute('stroke-width', '2');
-
-    // Highlight styling
-    if (this.selectedNodeId === node.id) {
-      circle.setAttribute('stroke', '#667eea');
-      circle.setAttribute('stroke-width', '4');
-    } else if (this.hoveredNodeId === node.id) {
-      circle.setAttribute('stroke', '#fbbf24');
-      circle.setAttribute('stroke-width', '3');
-    }
 
     // Node label
     const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
@@ -531,6 +530,26 @@ export class D3Renderer extends BaseRenderer {
     this._updateNodeVisuals();
   }
 
+  setCassettePlaybackState(playback) {
+    const planned = playback?.plannedTargets || [];
+    const elapsed = playback?.elapsedTargets || [];
+
+    this.cassettePlannedTargets = new Set(planned);
+    this.cassetteElapsedTargets = new Set(elapsed);
+    this.cassetteCurrentTargetId = playback?.currentTargetId || null;
+
+    this._updateNodeVisuals();
+    this._updateLinkVisuals();
+  }
+
+  clearCassettePlaybackState() {
+    this.cassettePlannedTargets.clear();
+    this.cassetteElapsedTargets.clear();
+    this.cassetteCurrentTargetId = null;
+    this._updateNodeVisuals();
+    this._updateLinkVisuals();
+  }
+
   focus(targetType, targetId) {
     super.focus(targetType, targetId);
     // Zoom to center on the node
@@ -610,37 +629,39 @@ export class D3Renderer extends BaseRenderer {
     this.nodes.forEach(node => {
       const g = this.svg.querySelector(`[data-node-id="${node.id}"]`);
       if (!g) return;
-      
-      const circle = g.querySelector('circle');
-      if (!circle) return;
-      
-      // Reset to default
-      circle.setAttribute('stroke', '#fff');
-      circle.setAttribute('stroke-width', '2');
-      
-      // Apply highlights
-      if (this.selectedNodeId === node.id) {
-        circle.setAttribute('stroke', '#667eea');
-        circle.setAttribute('stroke-width', '4');
-      } else if (this.hoveredNodeId === node.id) {
-        circle.setAttribute('stroke', '#fbbf24');
-        circle.setAttribute('stroke-width', '3');
-      } else if (this.highlightedElements.has(node.id)) {
-        const kind = this.highlightedElements.get(node.id);
-        if (kind === 'play') {
-          circle.setAttribute('stroke', '#f56565');
-          circle.setAttribute('stroke-width', '4');
-        } else if (kind === 'focus') {
-          circle.setAttribute('stroke', '#48bb78');
-          circle.setAttribute('stroke-width', '3');
-        }
-      }
+
+      g.classList.toggle('is-selected', this.selectedNodeId === node.id);
+      g.classList.toggle('is-hovered', this.hoveredNodeId === node.id);
+
+      const kind = this.highlightedElements.get(node.id);
+      g.classList.toggle('is-play', kind === 'play');
+      g.classList.toggle('is-focus', kind === 'focus');
+      g.classList.toggle('is-annotated', kind === 'annotated');
+      g.classList.toggle('is-hover', kind === 'hover');
+      g.classList.toggle('is-select', kind === 'select');
+
+      g.classList.toggle('is-cassette-planned', this.cassettePlannedTargets.has(node.id));
+      g.classList.toggle('is-cassette-elapsed', this.cassetteElapsedTargets.has(node.id));
+      g.classList.toggle('is-cassette-current', this.cassetteCurrentTargetId === node.id);
       
       // Update text color based on theme
       const text = g.querySelector('text');
       if (text) {
         text.setAttribute('fill', this.theme === 'dark' ? '#d4d4d4' : '#333');
       }
+    });
+  }
+
+  _updateLinkVisuals() {
+    if (!this.svg) return;
+
+    this.links.forEach(link => {
+      const line = this.svg.querySelector(`[data-link-id="${link.id}"]`);
+      if (!line) return;
+
+      line.classList.toggle('is-cassette-planned', this.cassettePlannedTargets.has(link.id));
+      line.classList.toggle('is-cassette-elapsed', this.cassetteElapsedTargets.has(link.id));
+      line.classList.toggle('is-cassette-current', this.cassetteCurrentTargetId === link.id);
     });
   }
 

@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>GS Module Dependency Tree</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, sans-serif;
+      margin: 24px;
+      color: #111827;
+      background: #f9fafb;
+    }
+    h1 {
+      font-size: 20px;
+      margin-bottom: 12px;
+    }
+    .card {
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 16px;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+    }
+    pre {
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 12px;
+      line-height: 1.5;
+      margin: 0;
+    }
+    .meta {
+      margin-top: 8px;
+      color: #6b7280;
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+  <h1>GS Module Dependency Tree</h1>
+  <div class="card">
+<pre>app/src/index.js (GS bootstrap)
+  - Core
+    - app/src/core/event/bus.js → no imports
+    - app/src/core/entity.js → no imports
+    - app/src/core/relation.js → no imports
+    - app/src/core/schema.js → Entity, Relation
+    - app/src/core/graph.js → Entity, Relation (runtime: EventBus, Schema)
+    - app/src/core/query-engine.js → no imports (runtime: Graph)
+    - app/src/core/diff-engine.js → no imports
+    - app/src/core/versioning.js → Entity, Relation (runtime: Graph, EventBus)
+    - app/src/core/undo-redo.js → no imports (runtime: Graph → eventBus)
+    - app/src/core/event-replay.js → EventBus, Graph
+    - app/src/core/error-handler.js → EventBus
+    - app/src/core/event-audit.js → EventBus
+  - Services
+    - app/src/services/annotation-service.js → no imports (runtime: Graph, EventBus)
+    - app/src/services/cassette-player.js → no imports (runtime: EventBus)
+    - app/src/services/highlight-controller.js → no imports (runtime: EventBus)
+    - app/src/services/sync-manager.js → no imports (runtime: Graph, EventBus, StorageManager, DataAdapterManager)
+  - Adapters
+    - app/src/adapters/data/data-adapter-manager.js → utils/event-emitter.js
+    - app/src/adapters/data/github-adapter.js → no imports (uses fetch)
+    - app/src/adapters/storage/storage-manager.js → utils/event-emitter.js
+    - app/src/adapters/storage/local-storage-adapter.js → utils/event-emitter.js
+    - app/src/adapters/storage/indexed-db-adapter.js → utils/event-emitter.js
+    - app/src/adapters/storage/rest-adapter.js → utils/event-emitter.js
+  - UI
+    - app/src/ui/bridge.js → no imports (runtime: Graph, EventBus, Renderer)
+    - app/src/ui/renderers/base-renderer.js → no imports
+    - app/src/ui/renderers/d3-renderer.js → base-renderer.js
+    - app/src/ui/renderers/tree-renderer.js → base-renderer.js
+    - app/src/ui/renderers/json-renderer.js → base-renderer.js
+  - Utils
+    - app/src/utils/event-emitter.js → no imports
+    - app/src/utils/performance.js → no imports
+</pre>
+    <div class="meta">Generated Feb 4, 2026</div>
+  </div>
+</body>
+</html>
